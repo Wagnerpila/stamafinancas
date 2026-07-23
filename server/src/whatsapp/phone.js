@@ -19,3 +19,16 @@ export function jidToPhoneVariants(jid) {
   const number = String(jid || '').split('@')[0].split(':')[0];
   return phoneVariants(number);
 }
+
+// WhatsApp's newer "LID" (linked/anonymous ID) addressing means msg.key.remoteJid is often
+// NOT a phone number (it ends in "@lid" and its digits are an opaque internal ID) — the real
+// number, when Baileys knows it, comes through remoteJidAlt/participantAlt instead. Collect
+// variants from every JID-shaped field that isn't a LID.
+export function phoneVariantsFromKey(key) {
+  const variants = new Set();
+  for (const jid of [key?.remoteJid, key?.remoteJidAlt, key?.participantAlt, key?.participant]) {
+    if (!jid || jid.endsWith('@lid') || jid.endsWith('@g.us')) continue;
+    for (const v of jidToPhoneVariants(jid)) variants.add(v);
+  }
+  return [...variants];
+}

@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { requireAIProvider } from '../services/ai/index.js';
 import { enforceTransactionLimit } from '../services/entityConfig.js';
 import { transactionExtractionSchema, receiptOcrPrompt } from '../services/ai/prompts.js';
-import { jidToPhoneVariants } from './phone.js';
+import { phoneVariantsFromKey } from './phone.js';
 
 const HELP_TEXT =
   'Olá! Manda uma *foto* ou *PDF* de um comprovante, recibo ou fatura que eu leio e lanço a transação pra você. 📸\n\n' +
@@ -19,8 +19,8 @@ function formatDateBR(isoDate) {
   return d.toLocaleDateString('pt-BR');
 }
 
-async function findUserByJid(remoteJid) {
-  const variants = new Set(jidToPhoneVariants(remoteJid));
+async function findUserByKey(key) {
+  const variants = new Set(phoneVariantsFromKey(key));
   if (variants.size === 0) return null;
 
   const candidates = await prisma.user.findMany({
@@ -61,8 +61,15 @@ export async function handleIncomingMessage(sock, msg) {
     return;
   }
 
-  const user = await findUserByJid(remoteJid);
+  const user = await findUserByKey(msg.key);
   if (!user) {
+    console.log(
+      '[whatsapp] Número não encontrado. remoteJid=%s remoteJidAlt=%s participantAlt=%s variantes=%o',
+      msg.key?.remoteJid,
+      msg.key?.remoteJidAlt,
+      msg.key?.participantAlt,
+      phoneVariantsFromKey(msg.key)
+    );
     await reply(
       'Não encontrei nenhuma conta cadastrada com este número de WhatsApp. ' +
         'Acesse *Configurações > Alertas por WhatsApp* no app e cadastre este número primeiro.'
