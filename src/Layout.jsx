@@ -9,6 +9,7 @@ import {
   List, 
   BarChart3, 
   Settings,
+  Wallet,
   Receipt,
   CreditCard,
   Target,
