@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Wallet, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import stamaLogo from '@/assets/stama-logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,8 +51,8 @@ export default function Register() {
       <div className="w-full max-w-md">
         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border-0">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <Wallet className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 rounded-xl overflow-hidden mx-auto mb-4 shadow-lg">
+              <img src={stamaLogo} alt="STAMA" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Criar Conta</h1>
             <p className="text-slate-600 dark:text-slate-300">Comece a controlar suas finanças</p>

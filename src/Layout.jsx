@@ -9,7 +9,6 @@ import {
   List, 
   BarChart3, 
   Settings,
-  Wallet,
   Receipt,
   CreditCard,
   Target,
@@ -28,6 +27,7 @@ import InAppAlerts from "./components/notifications/InAppAlerts";
 import BillsDueAlert from "./components/alerts/BillsDueAlert";
 import useDarkMode from "./hooks/useDarkMode";
 import BottomTabBar from "./components/mobile/BottomTabBar";
+import stamaLogo from "@/assets/stama-logo.png";
 import DeleteAccount from "./components/settings/DeleteAccount";
 
 const navigationItems = [
@@ -73,11 +73,11 @@ const SidebarInner = ({ user, onLinkClick, handleLogout, isDark, toggleDark }) =
   <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
     <div className="border-b border-slate-100 p-4 lg:p-6 shrink-0">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-          <Wallet className="w-6 h-6 text-white" />
+        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shrink-0">
+          <img src={stamaLogo} alt="STAMA" className="w-full h-full object-cover" />
         </div>
         <div>
-          <h2 className="font-bold text-slate-900 dark:text-white text-lg">FinançasAI</h2>
+          <h2 className="font-bold text-slate-900 dark:text-white text-lg">STAMA</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">Controle Financeiro</p>
         </div>
       </div>
@@ -215,10 +215,10 @@ export default function Layout({ children, currentPageName }) {
         {/* Mobile Header */}
         <header className="lg:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b dark:border-slate-700 p-4 flex justify-between items-center sticky top-0 z-30">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-md">
-              <Wallet className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden shadow-md shrink-0">
+              <img src={stamaLogo} alt="STAMA" className="w-full h-full object-cover" />
             </div>
-            <h2 className="font-bold text-slate-900 text-md">FinançasAI</h2>
+            <h2 className="font-bold text-slate-900 text-md">STAMA</h2>
           </div>
           <div className="flex items-center">
             <InAppAlerts />
