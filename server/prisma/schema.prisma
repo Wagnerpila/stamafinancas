@@ -1,0 +1,376 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// User & auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  password_hash        String
+  full_name            String
+  role                 String   @default("user") // "user" | "admin"
+  whatsapp_number      String?
+  monthly_budget       Float?
+  food_voucher_balance Float?
+  subscription_plan_name String @default("free") // "free" | "premium"
+  created_date         DateTime @default(now())
+  updated_date         DateTime @updatedAt
+
+  transactions          Transaction[]
+  categories            TransactionCategory[]
+  creditCards           CreditCard[]
+  creditCardInvoices    CreditCardInvoice[]
+  creditCardTransactions CreditCardTransaction[]
+  bills                 Bill[]
+  crediarios            Crediario[]
+  goals                 Goal[]
+  categoryBudgets       CategoryBudget[]
+  spendingSummaries     SpendingSummary[]
+  aiConsultations       AIConsultation[]
+  notificationSettings  NotificationSettings?
+  sharedFinancialData   SharedFinancialData?
+
+  sentConnectionRequests     ConnectionRequest[] @relation("ConnectionFrom")
+  receivedConnectionRequests ConnectionRequest[] @relation("ConnectionTo")
+  sentChatMessages           ChatMessage[]       @relation("ChatSender")
+  receivedChatMessages       ChatMessage[]       @relation("ChatReceiver")
+}
+
+// ---------------------------------------------------------------------------
+// Core financial entities (single-owner, generic CRUD)
+// ---------------------------------------------------------------------------
+
+model TransactionCategory {
+  id           String   @id @default(cuid())
+  user_id      String
+  created_by   String
+  name         String
+  type         String // "income" | "expense"
+  icon         String  @default("📦")
+  color        String  @default("#3b82f6")
+  is_default   Boolean @default(false)
+  active       Boolean @default(true)
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, name, type])
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  user_id         String
+  created_by      String
+  description     String
+  amount          Float
+  type            String // "income" | "expense"
+  category        String
+  date            DateTime
+  payment_method  String   @default("cash") // cash|pix|debit|credit_card|food_voucher
+  credit_card_id  String?
+  invoice_id      String?
+  notes           String?
+  is_food_voucher Boolean  @default(false)
+  linked_bill_id  String?
+  created_date    DateTime @default(now())
+  updated_date    DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, date])
+}
+
+model CreditCard {
+  id           String   @id @default(cuid())
+  user_id      String
+  created_by   String
+  name         String
+  last_digits  String?
+  limit        Float?
+  closing_day  Int
+  due_day      Int
+  active       Boolean  @default(true)
+  color_index  Int      @default(0)
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+
+  user     User                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  invoices CreditCardInvoice[]
+  cardTxs  CreditCardTransaction[]
+
+  @@index([user_id])
+}
+
+model CreditCardInvoice {
+  id              String    @id @default(cuid())
+  user_id         String
+  created_by      String
+  card_id         String
+  reference_month String // "YYYY-MM"
+  closing_date    DateTime
+  due_date        DateTime
+  total_amount    Float     @default(0)
+  status          String    @default("open") // open|closed|paid|overdue
+  paid_amount     Float?
+  paid_date       DateTime?
+  created_date    DateTime  @default(now())
+  updated_date    DateTime  @updatedAt
+
+  user User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  card CreditCard @relation(fields: [card_id], references: [id], onDelete: Cascade)
+
+  @@unique([card_id, reference_month])
+  @@index([user_id])
+}
+
+model CreditCardTransaction {
+  id                 String   @id @default(cuid())
+  user_id            String
+  created_by         String
+  card_id            String
+  description        String
+  amount             Float
+  category           String?
+  purchase_date      DateTime
+  installments       Int      @default(1)
+  installment_number Int      @default(1)
+  invoice_id         String?
+  notes              String?
+  created_date       DateTime @default(now())
+  updated_date       DateTime @updatedAt
+
+  user User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  card CreditCard @relation(fields: [card_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([card_id])
+}
+
+model Bill {
+  id                  String    @id @default(cuid())
+  user_id             String
+  created_by          String
+  title               String
+  description         String?
+  amount              Float
+  type                String // "payable" | "receivable"
+  category            String?
+  due_date            DateTime
+  paid_date           DateTime?
+  status              String    @default("pending") // pending|paid|overdue
+  recurrence          String    @default("none") // none|monthly|quarterly|yearly
+  notes               String?
+  is_food_voucher     Boolean   @default(false)
+  card_id             String?
+  // Polymorphic by convention (matches the previous base44 schema exactly): points at either a
+  // CreditCardInvoice.id (future installment bill) or a parent recurring Bill.id (paid-copy row),
+  // depending on which flow created the row. Kept as a single field rather than split in two,
+  // since the split would require coordinated edits across 6 frontend files with no way to
+  // visually verify the result in this pass — flagged as a good follow-up with real UI testing.
+  linked_bill_id      String?
+  created_date        DateTime  @default(now())
+  updated_date        DateTime  @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, due_date])
+}
+
+model Crediario {
+  id                 String   @id @default(cuid())
+  user_id            String
+  created_by         String
+  store              String
+  description        String?
+  total_amount       Float
+  installments       Int
+  installment_amount Float
+  first_due_date     DateTime
+  notes              String?
+  paid_installments  Int      @default(0)
+  status              String  @default("active") // active|paid|overdue
+  created_date        DateTime @default(now())
+  updated_date        DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model Goal {
+  id                   String    @id @default(cuid())
+  user_id              String
+  created_by           String
+  title                String
+  description          String?
+  target_amount        Float
+  current_amount       Float     @default(0)
+  target_date          DateTime
+  category             String    @default("other")
+  priority             String    @default("medium") // low|medium|high
+  monthly_contribution Float?
+  status               String    @default("active") // active|completed
+  created_date         DateTime  @default(now())
+  updated_date         DateTime  @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model CategoryBudget {
+  id            String   @id @default(cuid())
+  user_id       String
+  created_by    String
+  category      String
+  monthly_limit Float
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, category])
+}
+
+model SpendingSummary {
+  id                  String   @id @default(cuid())
+  user_id             String
+  created_by          String
+  reference_month     String // "YYYY-MM"
+  total_income        Float
+  total_expense       Float
+  balance             Float
+  savings_rate        Float
+  top_category        String?
+  top_category_amount Float?
+  ai_insights         String?
+  savings_tips        String?
+  created_date        DateTime @default(now())
+  updated_date        DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, reference_month])
+}
+
+model AIConsultation {
+  id           String   @id @default(cuid())
+  user_id      String
+  created_by   String
+  question     String
+  response     String
+  category     String   @default("general")
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model NotificationSettings {
+  id                String   @id @default(cuid())
+  user_id           String   @unique
+  created_by        String
+  enabled           Boolean  @default(true)
+  bills_due_days    Int      @default(3)
+  overdue_reminders Boolean  @default(true)
+  goals_progress    Boolean  @default(true)
+  weekly_summary    Boolean  @default(true)
+  created_date      DateTime @default(now())
+  updated_date      DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Admin-managed catalog (public read, admin write)
+// ---------------------------------------------------------------------------
+
+model SubscriptionPlan {
+  id               String   @id @default(cuid())
+  created_by       String
+  plan_name        String   @unique
+  features         String // JSON-encoded object
+  pricing          String // JSON-encoded object
+  transaction_limit Int     @default(-1)
+  active           Boolean  @default(true)
+  created_date     DateTime @default(now())
+  updated_date     DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Community network (cross-user visibility, custom routes)
+// ---------------------------------------------------------------------------
+
+model SharedFinancialData {
+  id                      String   @id @default(cuid())
+  user_id                 String   @unique
+  created_by              String
+  anonymous_id            String   @unique
+  display_number          Int?
+  avatar_url              String?
+  is_sharing              Boolean  @default(false)
+  total_income            Float    @default(0)
+  total_expense           Float    @default(0)
+  monthly_average_expense Float    @default(0)
+  savings_rate            Float    @default(0)
+  category_spending       String   @default("{}") // JSON-encoded map
+  months_tracked          Int      @default(0)
+  financial_evolution     String   @default("[]") // JSON-encoded array
+  last_updated            DateTime @default(now())
+  created_date            DateTime @default(now())
+  updated_date            DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model ConnectionRequest {
+  id                String   @id @default(cuid())
+  created_by        String
+  from_user_id      String
+  from_anonymous_id String
+  to_user_id        String
+  to_anonymous_id   String
+  status            String   @default("pending") // pending|accepted|rejected
+  message           String?
+  created_date      DateTime @default(now())
+  updated_date      DateTime @updatedAt
+
+  fromUser User @relation("ConnectionFrom", fields: [from_user_id], references: [id], onDelete: Cascade)
+  toUser   User @relation("ConnectionTo", fields: [to_user_id], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([from_user_id])
+  @@index([to_user_id])
+}
+
+model ChatMessage {
+  id                   String   @id @default(cuid())
+  created_by           String
+  connection_id        String
+  sender_id            String
+  sender_anonymous_id  String?
+  receiver_id          String
+  message              String
+  read                 Boolean  @default(false)
+  created_date         DateTime @default(now())
+  updated_date         DateTime @updatedAt
+
+  connection ConnectionRequest @relation(fields: [connection_id], references: [id], onDelete: Cascade)
+  sender     User              @relation("ChatSender", fields: [sender_id], references: [id], onDelete: Cascade)
+  receiver   User              @relation("ChatReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+
+  @@index([connection_id])
+}

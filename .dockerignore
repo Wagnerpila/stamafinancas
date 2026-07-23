@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-ssr
+server/node_modules
+server/uploads
+server/prisma/dev.db
+server/prisma/dev.db-journal
+server/.env
+.env
+.git
+*.log

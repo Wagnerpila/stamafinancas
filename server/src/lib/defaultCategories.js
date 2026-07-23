@@ -1,0 +1,15 @@
+export const DEFAULT_CATEGORIES = [
+  { name: 'Salário', type: 'income', icon: '💰', color: '#10b981', is_default: true },
+  { name: 'Freelance', type: 'income', icon: '💻', color: '#3b82f6', is_default: true },
+  { name: 'Investimento', type: 'income', icon: '📈', color: '#8b5cf6', is_default: true },
+  { name: 'Outras Receitas', type: 'income', icon: '💵', color: '#06b6d4', is_default: true },
+  { name: 'Alimentação', type: 'expense', icon: '🍔', color: '#f59e0b', is_default: true },
+  { name: 'Transporte', type: 'expense', icon: '🚗', color: '#6366f1', is_default: true },
+  { name: 'Saúde', type: 'expense', icon: '🏥', color: '#ef4444', is_default: true },
+  { name: 'Educação', type: 'expense', icon: '📚', color: '#3b82f6', is_default: true },
+  { name: 'Entretenimento', type: 'expense', icon: '🎮', color: '#ec4899', is_default: true },
+  { name: 'Compras', type: 'expense', icon: '🛍️', color: '#f97316', is_default: true },
+  { name: 'Contas', type: 'expense', icon: '📄', color: '#84cc16', is_default: true },
+  { name: 'Aluguel', type: 'expense', icon: '🏠', color: '#06b6d4', is_default: true },
+  { name: 'Outras Despesas', type: 'expense', icon: '💸', color: '#6366f1', is_default: true },
+];
