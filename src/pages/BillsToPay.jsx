@@ -14,7 +14,7 @@ import { format, startOfMonth } from "date-fns";
 // Para contas recorrentes originais, a lógica está em filteredBills diretamente
 function billAppearsInMonth(bill, selectedDate) {
   if (!bill.due_date) return false;
-  const due = new Date(bill.due_date + "T00:00:00");
+  const due = new Date(bill.due_date.slice(0, 10) + "T00:00:00");
   if (isNaN(due)) return false;
 
   const sel = startOfMonth(selectedDate);
@@ -48,7 +48,7 @@ function buildVirtualBill(bill, selectedDate) {
   if (!bill.recurrence || bill.recurrence === "none") return bill;
   if (bill.status === "paid") return bill;
 
-  const due = new Date(bill.due_date + "T00:00:00");
+  const due = new Date(bill.due_date.slice(0, 10) + "T00:00:00");
   const targetDue = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), due.getDate());
   return {
     ...bill,
@@ -194,7 +194,7 @@ export default function BillsToPay() {
         bill.linked_bill_id
       ) {
         const dueMth = bill.due_date
-          ? format(startOfMonth(new Date(bill.due_date + "T00:00:00")), "yyyy-MM")
+          ? format(startOfMonth(new Date(bill.due_date.slice(0, 10) + "T00:00:00")), "yyyy-MM")
           : null;
         if (dueMth === selectedMonthKey) {
           recurringIdsPaidThisMonth.add(bill.linked_bill_id);

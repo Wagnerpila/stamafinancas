@@ -23,7 +23,7 @@ export default function FuturePlanningWidget({ bills = [] }) {
     const map = {}; // { "yyyy-MM": Set([originalId, ...]) }
     bills.forEach(b => {
       if (b.status === "paid" && (!b.recurrence || b.recurrence === "none") && b.linked_bill_id && b.due_date) {
-        const d = new Date(b.due_date + "T00:00:00");
+        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
         if (!isNaN(d)) {
           const key = format(startOfMonth(d), "yyyy-MM");
           if (!map[key]) map[key] = new Set();
@@ -45,7 +45,7 @@ export default function FuturePlanningWidget({ bills = [] }) {
         if (b.type !== "payable" || b.status === "paid") return false;
         if (b.category !== "credit_card") return false;
         if (!b.due_date) return false;
-        const d = b.due_date.length === 10 ? new Date(b.due_date + "T00:00:00") : new Date(b.due_date);
+        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
         if (isNaN(d)) return false;
         return format(startOfMonth(d), "yyyy-MM") === key;
       });

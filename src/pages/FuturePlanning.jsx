@@ -65,7 +65,7 @@ export default function FuturePlanning() {
         // Só adiciona se não há transação de receita já lançada nesse mês (evita dupla contagem)
         receivableBills.forEach(b => {
           if (!b.due_date || !b.amount) return;
-          const d = new Date(b.due_date + "T00:00:00");
+          const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
           if (isNaN(d)) return;
 
           if (b.recurrence === "monthly") {
@@ -111,7 +111,7 @@ export default function FuturePlanning() {
     bills.forEach(b => {
       if (!b.due_date || b.status === "paid") return;
       try {
-        const d = b.due_date.length === 10 ? new Date(b.due_date + "T00:00:00") : new Date(b.due_date);
+        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
         if (!isNaN(d)) keysWithData.add(format(startOfMonth(d), "yyyy-MM"));
       } catch { /* skip */ }
     });
@@ -131,7 +131,7 @@ export default function FuturePlanning() {
       if (b.type !== "payable" || b.status === "paid" || b.category !== "credit_card") return;
       if (!b.due_date) return;
       try {
-        const d = b.due_date.length === 10 ? new Date(b.due_date + "T00:00:00") : new Date(b.due_date);
+        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
         if (isNaN(d)) return;
         const key = format(startOfMonth(d), "yyyy-MM");
         if (map[key] !== undefined) {
@@ -153,7 +153,7 @@ export default function FuturePlanning() {
     const paidByMonth = {}; // { "2026-05": Set([billId, ...]) }
     bills.forEach(b => {
       if (b.status === "paid" && (!b.recurrence || b.recurrence === "none") && b.linked_bill_id && b.due_date) {
-        const d = new Date(b.due_date + "T00:00:00");
+        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
         if (!isNaN(d)) {
           const key = format(startOfMonth(d), "yyyy-MM");
           if (!paidByMonth[key]) paidByMonth[key] = new Set();
@@ -212,7 +212,7 @@ export default function FuturePlanning() {
     const ids = new Set();
     bills.forEach(b => {
       if (b.status === "paid" && (!b.recurrence || b.recurrence === "none") && b.linked_bill_id && b.due_date) {
-        const d = new Date(b.due_date + "T00:00:00");
+        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
         if (!isNaN(d) && format(startOfMonth(d), "yyyy-MM") === currentKey) {
           ids.add(b.linked_bill_id);
         }
@@ -240,7 +240,7 @@ export default function FuturePlanning() {
       .filter(b => {
         if (!b.due_date || b.status === "paid") return false;
         try {
-          const d = b.due_date.length === 10 ? new Date(b.due_date + "T00:00:00") : new Date(b.due_date);
+          const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
           if (isNaN(d)) return false;
           return d >= now && d <= end;
         } catch { return false; }
@@ -394,7 +394,7 @@ export default function FuturePlanning() {
           <CardContent>
             <div className="space-y-3">
               {upcomingBills.map(bill => {
-                const dueDate = bill.due_date.length === 10 ? new Date(bill.due_date + "T00:00:00") : new Date(bill.due_date);
+                const dueDate = new Date(bill.due_date.slice(0, 10) + "T00:00:00");
                 const daysLeft = Math.ceil((dueDate - new Date()) / (1000 * 60 * 60 * 24));
                 const isUrgent = daysLeft <= 7;
                 return (
