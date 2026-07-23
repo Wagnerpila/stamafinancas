@@ -90,6 +90,14 @@ sempre derivado do token JWT autenticado, nunca aceito do corpo da requisição.
 (`/api/users`, escrita em `/api/subscription-plans`) exigem `role: "admin"` verificado no
 servidor.
 
-## WhatsApp
+## Bot do WhatsApp
 
-Integração com WhatsApp foi deixada de fora desta migração (a implementar depois).
+Não usa a API oficial da Meta — conecta via WhatsApp Web (biblioteca
+[Baileys](https://github.com/WhiskeySockets/Baileys)), pareando por QR Code direto no
+Painel Admin do app (`/api/whatsapp/*`, `server/src/whatsapp/`). A sessão fica salva ao
+lado do banco SQLite, então sobrevive a redeploys sem precisar de um segundo volume.
+
+Fluxo: o usuário manda uma foto/PDF de comprovante ou fatura para o número conectado; o
+bot identifica o remetente pelo `whatsapp_number` cadastrado em Configurações > Alertas,
+roda o mesmo adapter de IA usado no OCR de comprovantes, e lança a transação automaticamente
+na conta da pessoa — respondendo com um resumo do que foi registrado.

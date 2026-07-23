@@ -49,7 +49,7 @@ function mergeExtra(baseWhere, filter) {
 // The plan's transaction_limit was previously only enforced client-side (trivially bypassable
 // by calling the API directly). Enforce it here, driven by the actual SubscriptionPlan catalog
 // row instead of a hardcoded number, so admin edits in SubscriptionAdmin.jsx take real effect.
-async function enforceTransactionLimit(user) {
+export async function enforceTransactionLimit(user) {
   const plan = await prisma.subscriptionPlan.findUnique({ where: { plan_name: user.subscription_plan_name || 'free' } });
   const limit = plan ? plan.transaction_limit : 10;
   if (limit === -1 || limit === undefined || limit === null) return;

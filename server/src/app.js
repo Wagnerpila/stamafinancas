@@ -7,6 +7,7 @@ import entitiesRoutes from './routes/entities.routes.js';
 import subscriptionPlansRoutes from './routes/subscriptionPlans.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import whatsappRoutes from './routes/whatsapp.routes.js';
 import miscRoutes from './routes/misc.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -32,6 +33,7 @@ export function createApp() {
   app.use('/api/subscription-plans', subscriptionPlansRoutes);
   app.use('/api/upload', uploadRoutes);
   app.use('/api/ai', aiRoutes);
+  app.use('/api/whatsapp', whatsappRoutes);
   app.use('/api', miscRoutes);
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));

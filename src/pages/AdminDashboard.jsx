@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { ShieldCheck, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import WhatsAppBotPanel from '@/components/admin/WhatsAppBotPanel';
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
@@ -81,6 +82,8 @@ export default function AdminDashboard() {
           </div>
         </div>
       </motion.div>
+
+      <WhatsAppBotPanel />
 
       <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
         <CardHeader>
