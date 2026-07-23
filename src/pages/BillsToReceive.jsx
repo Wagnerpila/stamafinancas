@@ -20,8 +20,11 @@ function billAppearsInMonth(bill, selectedDate) {
   const sel = startOfMonth(selectedDate);
   const origin = startOfMonth(due);
 
-  // Contas recorrentes originais: verifica só o intervalo
-  if (bill.recurrence && bill.recurrence !== "none") {
+  // Contas recorrentes originais ainda pendentes: verifica só o intervalo.
+  // Se a própria original já estiver com status "paid" (dado inconsistente, ex: linha
+  // antiga marcada como paga antes desta lógica existir), trata como conta avulsa —
+  // caso contrário ela "vazaria" como paga em todos os meses futuros para sempre.
+  if (bill.recurrence && bill.recurrence !== "none" && bill.status !== "paid") {
     if (sel < origin) return false;
     if (bill.recurrence === "monthly") return true;
     if (bill.recurrence === "quarterly") {
@@ -34,7 +37,7 @@ function billAppearsInMonth(bill, selectedDate) {
     return false;
   }
 
-  // Conta não recorrente paga: aparece no mês do due_date (que é o mês em que foi paga/venceu)
+  // Conta não recorrente (ou recorrente-mas-já-paga-diretamente): aparece só no mês do due_date
   if (bill.status === "paid") {
     return format(origin, "yyyy-MM") === format(sel, "yyyy-MM");
   }
