@@ -8,6 +8,55 @@ import { motion } from "framer-motion";
 import BillForm from "../components/bills/BillForm.jsx";
 import BillsList from "../components/bills/BillsList";
 import MonthFilter from "../components/common/MonthFilter";
+import { format, startOfMonth } from "date-fns";
+
+// Retorna se uma bill (não recorrente) deve aparecer no mês selecionado
+// Para contas recorrentes originais, a lógica está em filteredBills diretamente
+function billAppearsInMonth(bill, selectedDate) {
+  if (!bill.due_date) return false;
+  const due = new Date(bill.due_date.slice(0, 10) + "T00:00:00");
+  if (isNaN(due)) return false;
+
+  const sel = startOfMonth(selectedDate);
+  const origin = startOfMonth(due);
+
+  // Contas recorrentes originais: verifica só o intervalo
+  if (bill.recurrence && bill.recurrence !== "none") {
+    if (sel < origin) return false;
+    if (bill.recurrence === "monthly") return true;
+    if (bill.recurrence === "quarterly") {
+      const diffMonths = Math.round((sel - origin) / (1000 * 60 * 60 * 24 * 30.44));
+      return diffMonths % 3 === 0;
+    }
+    if (bill.recurrence === "yearly") {
+      return due.getMonth() === selectedDate.getMonth();
+    }
+    return false;
+  }
+
+  // Conta não recorrente paga: aparece no mês do due_date (que é o mês em que foi paga/venceu)
+  if (bill.status === "paid") {
+    return format(origin, "yyyy-MM") === format(sel, "yyyy-MM");
+  }
+
+  // Conta não recorrente pendente: aparece só no mês do vencimento
+  return format(origin, "yyyy-MM") === format(sel, "yyyy-MM");
+}
+
+// Gera uma "instância virtual" da bill para o mês selecionado (com due_date ajustado)
+function buildVirtualBill(bill, selectedDate) {
+  if (!bill.recurrence || bill.recurrence === "none") return bill;
+  if (bill.status === "paid") return bill;
+
+  const due = new Date(bill.due_date.slice(0, 10) + "T00:00:00");
+  const targetDue = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), due.getDate());
+  return {
+    ...bill,
+    _virtual: true,
+    _originalId: bill.id,
+    due_date: format(targetDue, "yyyy-MM-dd"),
+  };
+}
 
 export default function BillsToReceive() {
   const [bills, setBills] = useState([]);
@@ -61,7 +110,9 @@ export default function BillsToReceive() {
   };
 
   const handleEdit = (bill) => {
-    setEditingBill(bill);
+    const originalId = bill._originalId || bill.id;
+    const original = bills.find(b => b.id === originalId);
+    setEditingBill(original || bill);
     setShowForm(true);
   };
 
@@ -82,50 +133,59 @@ export default function BillsToReceive() {
         return;
       }
 
-      console.log("Marcando conta como recebida:", bill.title);
+      const today = new Date().toISOString().split('T')[0];
+      const originalId = bill._originalId || bill.id;
+      const originalBill = bills.find(b => b.id === originalId);
+      const srcBill = originalBill || bill;
 
-      // Se for vale alimentação, atualizar o saldo
-      if (bill.is_food_voucher) {
+      // Se for vale alimentação, atualizar o saldo (não gera transação)
+      if (srcBill.is_food_voucher) {
         const currentBalance = user.food_voucher_balance || 0;
-        const newBalance = currentBalance + bill.amount;
-        
+        const newBalance = currentBalance + srcBill.amount;
         await base44.auth.updateMe({ food_voucher_balance: newBalance });
-        console.log(`Saldo do vale atualizado: R$ ${currentBalance.toFixed(2)} → R$ ${newBalance.toFixed(2)}`);
+        setUser({ ...user, food_voucher_balance: newBalance });
       } else {
-        // Se não for vale, criar transação normal
         // Usa a categoria da conta diretamente (nome customizado)
-        const category = bill.category || 'other_income';
-
-        const transactionData = {
-          description: `Recebimento da conta: ${bill.title}`,
-          amount: bill.amount,
+        const category = srcBill.category || 'other_income';
+        await base44.entities.Transaction.create({
+          description: `Recebimento da conta: ${srcBill.title}`,
+          amount: srcBill.amount,
           type: 'income',
           category: category,
-          date: new Date().toISOString().split('T')[0],
-          notes: `Referente a uma conta a receber com vencimento em ${new Date(bill.due_date).toLocaleDateString()}`,
-          created_by: user.email
-        };
-
-        console.log("Criando transação:", transactionData);
-        await base44.entities.Transaction.create(transactionData);
-        console.log("Transação criada com sucesso");
+          date: today,
+          notes: `Referente a uma conta a receber com vencimento em ${bill.due_date}`,
+          linked_bill_id: originalId,
+        });
       }
 
-      // Atualizar o status da conta
-      await base44.entities.Bill.update(bill.id, {
-        status: "paid",
-        paid_date: new Date().toISOString().split('T')[0]
-      });
+      const isRecurring = srcBill.recurrence && srcBill.recurrence !== "none";
 
-      console.log("Conta atualizada com sucesso");
+      if (isRecurring) {
+        // Conta recorrente: cria cópia paga apenas para o mês específico, NÃO altera a original
+        await base44.entities.Bill.create({
+          title: srcBill.title,
+          description: srcBill.description,
+          amount: srcBill.amount,
+          type: "receivable",
+          category: srcBill.category,
+          due_date: bill.due_date,
+          status: "paid",
+          paid_date: today,
+          recurrence: "none",
+          notes: srcBill.notes,
+          is_food_voucher: srcBill.is_food_voucher,
+          linked_bill_id: originalId,
+        });
+        // A bill original permanece intacta para os próximos meses
+      } else {
+        await base44.entities.Bill.update(originalId, { status: "paid", paid_date: today });
+      }
 
-      // Recarregar a lista de contas
       await loadBills(user.email);
-      
-      // Mostrar confirmação ao usuário
-      const message = bill.is_food_voucher 
-        ? `Vale alimentação de R$ ${bill.amount.toFixed(2)} adicionado ao seu saldo!`
-        : `Conta "${bill.title}" marcada como recebida e registrada nas receitas!`;
+
+      const message = srcBill.is_food_voucher
+        ? `Vale alimentação de R$ ${srcBill.amount.toFixed(2)} adicionado ao seu saldo!`
+        : `Conta "${srcBill.title}" marcada como recebida e registrada nas receitas!`;
       alert(message);
 
     } catch (error) {
@@ -134,12 +194,43 @@ export default function BillsToReceive() {
     }
   };
 
+  // Filtra e expande contas recorrentes para o mês selecionado
   const filteredBills = useMemo(() => {
-    return bills.filter(b => {
-      const d = new Date(b.due_date);
-      return d.getMonth() === selectedDate.getMonth() &&
-             d.getFullYear() === selectedDate.getFullYear();
+    const selectedMonthKey = format(startOfMonth(selectedDate), "yyyy-MM");
+
+    // Coleta IDs das contas recorrentes originais que já têm cópia paga neste mês específico
+    const recurringIdsPaidThisMonth = new Set();
+    bills.forEach(bill => {
+      if (
+        bill.status === "paid" &&
+        (!bill.recurrence || bill.recurrence === "none") &&
+        bill.linked_bill_id
+      ) {
+        const dueMth = bill.due_date
+          ? format(startOfMonth(new Date(bill.due_date.slice(0, 10) + "T00:00:00")), "yyyy-MM")
+          : null;
+        if (dueMth === selectedMonthKey) {
+          recurringIdsPaidThisMonth.add(bill.linked_bill_id);
+        }
+      }
     });
+
+    const result = [];
+    bills.forEach(bill => {
+      const isRecurringOriginal = bill.recurrence && bill.recurrence !== "none";
+
+      if (isRecurringOriginal) {
+        if (recurringIdsPaidThisMonth.has(bill.id)) return;
+        if (!billAppearsInMonth(bill, selectedDate)) return;
+        result.push(buildVirtualBill(bill, selectedDate));
+      } else {
+        if (!billAppearsInMonth(bill, selectedDate)) return;
+        result.push(bill);
+      }
+    });
+
+    result.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+    return result;
   }, [bills, selectedDate]);
 
   const stats = useMemo(() => {
