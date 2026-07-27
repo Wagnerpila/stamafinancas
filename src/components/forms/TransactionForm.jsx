@@ -157,15 +157,16 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
       await onSubmit(processedData);
       
       // If user wants to also create a bill to pay
+      // Usa a mesma categoria selecionada na transação — antes disso, um filtro contra uma
+      // lista antiga de slugs (anterior às categorias customizadas por nome) fazia a conta
+      // gerada cair sempre em "bills"/"other", ignorando a categoria que o usuário escolheu.
       if (createBill && formData.type === 'expense' && billDueDate) {
-        const transactionCategories = ["salary","freelance","investment","other_income","food","transport","health","education","entertainment","shopping","bills","rent","other_expense"];
-        const billCat = transactionCategories.includes(formData.category) ? formData.category : 'bills';
         await base44.entities.Bill.create({
           title: formData.description,
           description: formData.notes || '',
           amount: processedData.amount,
           type: "payable",
-          category: billCat,
+          category: formData.category,
           due_date: toLocalISOString(billDueDate),
           recurrence: "none"
         });
@@ -173,14 +174,12 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
 
       // If user wants to also create a bill to receive
       if (createReceivable && formData.type === 'income' && receivableDueDate) {
-        const receivableCategories = ["salary", "freelance", "investment", "other"];
-        const billCat = receivableCategories.includes(formData.category) ? formData.category : 'other';
         await base44.entities.Bill.create({
           title: formData.description,
           description: formData.notes || '',
           amount: processedData.amount,
           type: "receivable",
-          category: billCat,
+          category: formData.category,
           due_date: toLocalISOString(receivableDueDate),
           recurrence: "none"
         });
