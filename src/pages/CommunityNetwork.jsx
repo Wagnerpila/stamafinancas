@@ -443,7 +443,7 @@ export default function CommunityNetwork() {
 
       {/* Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80dvh] overflow-y-auto">
           {selectedUser && (
             <>
               <DialogHeader>

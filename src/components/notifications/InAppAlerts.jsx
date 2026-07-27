@@ -14,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { getEffectiveDueDateToday } from '@/components/lib/billRecurrence';
 
 export default function InAppAlerts() {
   const [alerts, setAlerts] = useState([]);
@@ -36,8 +37,14 @@ export default function InAppAlerts() {
         bills.forEach(bill => {
           // Só processar contas pendentes
           if (bill.status !== 'pending') return;
-          
-          const dueDate = new Date(bill.due_date);
+
+          // Para contas recorrentes, usa o vencimento projetado no mês atual (e ignora
+          // as que já têm cópia paga neste mês) em vez da data de vencimento original,
+          // que fica no passado para sempre e re-notificaria a conta indefinidamente.
+          const effectiveDueDate = getEffectiveDueDateToday(bill, bills);
+          if (!effectiveDueDate) return;
+
+          const dueDate = new Date(effectiveDueDate);
           dueDate.setHours(0, 0, 0, 0);
 
           if (dueDate < today) {
@@ -58,7 +65,7 @@ export default function InAppAlerts() {
                 id: `bill-due-soon-${bill.id}`,
                 type: 'due_soon',
                 message: `Conta "${bill.title}" vence ${daysUntilDue === 0 ? 'hoje' : `em ${daysUntilDue} dia(s)`}`,
-                date: bill.due_date,
+                date: effectiveDueDate,
                 url: createPageUrl(bill.type === 'payable' ? "BillsToPay" : "BillsToReceive"),
                 priority: daysUntilDue === 0 ? 1 : 2
               });

@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CreditCard, Receipt } from "lucide-react";
 import { getTodayBrazil } from "@/components/lib/dateUtils";
+import { getEffectiveDueDateToday } from "@/components/lib/billRecurrence";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -45,24 +46,26 @@ export default function BillsDueAlert() {
         const in2Days = addDays(today, 2);
 
         // 1. Bills (contas a pagar) vencendo hoje ou nos próximos 2 dias
+        // Busca todas as contas (não só "pending") para conseguir identificar, no caso das
+        // recorrentes, se já existe cópia paga para o mês atual — senão a conta original
+        // (que nunca muda de status) voltaria a notificar todo mês, mesmo já paga.
         const allBills = await base44.entities.Bill.filter({
           type: "payable",
-          status: "pending",
           created_by: user.email
         });
+        const pendingBills = allBills.filter(b => b.status === "pending");
 
-        const dueBills = allBills.filter(b => {
-          const due = (b.due_date || "").split("T")[0];
-          return due >= today && due <= in2Days;
-        });
+        const dueBills = pendingBills
+          .map(b => ({ bill: b, effectiveDueDate: getEffectiveDueDateToday(b, allBills) }))
+          .filter(({ effectiveDueDate }) => effectiveDueDate && effectiveDueDate >= today && effectiveDueDate <= in2Days);
 
-        const billItems = dueBills.map(b => ({
+        const billItems = dueBills.map(({ bill: b, effectiveDueDate }) => ({
           id: b.id,
           label: b.title,
           amount: b.amount,
-          due: b.due_date,
+          due: effectiveDueDate,
           type: "bill",
-          isToday: b.due_date.split("T")[0] === today,
+          isToday: effectiveDueDate === today,
         }));
 
         // 2. Faturas de cartão pendentes de pagamento (status closed ou open, não paid)
@@ -115,7 +118,7 @@ export default function BillsDueAlert() {
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <AlertDialogContent className="max-w-md max-h-[80dvh] overflow-y-auto">
         <AlertDialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">

@@ -213,7 +213,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { onClose(); reset(); } }}>
-      <DialogContent className="w-[95vw] max-w-2xl max-h-[88vh] overflow-y-auto p-4 sm:p-6">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[88dvh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600" />

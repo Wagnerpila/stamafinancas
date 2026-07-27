@@ -387,7 +387,7 @@ export default function TransactionCategories() {
       </AlertDialog>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="dark:bg-slate-800 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="dark:bg-slate-800 max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="dark:text-white">{editing ? 'Editar Categoria' : 'Nova Categoria'}</DialogTitle>
           </DialogHeader>

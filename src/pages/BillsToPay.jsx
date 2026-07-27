@@ -8,58 +8,7 @@ import { motion } from "framer-motion";
 import BillForm from "../components/bills/BillForm.jsx";
 import BillsList from "../components/bills/BillsList";
 import MonthFilter from "../components/common/MonthFilter";
-import { format, startOfMonth } from "date-fns";
-
-// Retorna se uma bill (não recorrente) deve aparecer no mês selecionado
-// Para contas recorrentes originais, a lógica está em filteredBills diretamente
-function billAppearsInMonth(bill, selectedDate) {
-  if (!bill.due_date) return false;
-  const due = new Date(bill.due_date.slice(0, 10) + "T00:00:00");
-  if (isNaN(due)) return false;
-
-  const sel = startOfMonth(selectedDate);
-  const origin = startOfMonth(due);
-
-  // Contas recorrentes originais ainda pendentes: verifica só o intervalo.
-  // Se a própria original já estiver com status "paid" (dado inconsistente, ex: linha
-  // antiga marcada como paga antes desta lógica existir), trata como conta avulsa —
-  // caso contrário ela "vazaria" como paga em todos os meses futuros para sempre.
-  if (bill.recurrence && bill.recurrence !== "none" && bill.status !== "paid") {
-    if (sel < origin) return false;
-    if (bill.recurrence === "monthly") return true;
-    if (bill.recurrence === "quarterly") {
-      const diffMonths = Math.round((sel - origin) / (1000 * 60 * 60 * 24 * 30.44));
-      return diffMonths % 3 === 0;
-    }
-    if (bill.recurrence === "yearly") {
-      return due.getMonth() === selectedDate.getMonth();
-    }
-    return false;
-  }
-
-  // Conta não recorrente (ou recorrente-mas-já-paga-diretamente): aparece só no mês do due_date
-  if (bill.status === "paid") {
-    return format(origin, "yyyy-MM") === format(sel, "yyyy-MM");
-  }
-
-  // Conta não recorrente pendente: aparece só no mês do vencimento
-  return format(origin, "yyyy-MM") === format(sel, "yyyy-MM");
-}
-
-// Gera uma "instância virtual" da bill para o mês selecionado (com due_date ajustado)
-function buildVirtualBill(bill, selectedDate) {
-  if (!bill.recurrence || bill.recurrence === "none") return bill;
-  if (bill.status === "paid") return bill;
-
-  const due = new Date(bill.due_date.slice(0, 10) + "T00:00:00");
-  const targetDue = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), due.getDate());
-  return {
-    ...bill,
-    _virtual: true,
-    _originalId: bill.id,
-    due_date: format(targetDue, "yyyy-MM-dd"),
-  };
-}
+import { getBillsForMonth, getPaidRecurringIdsForMonth } from "../components/lib/billRecurrence";
 
 export default function BillsToPay() {
   const [bills, setBills] = useState([]);
@@ -136,10 +85,29 @@ export default function BillsToPay() {
       const isVirtual = bill._virtual;
       const originalId = bill._originalId || bill.id;
       const originalBill = bills.find(b => b.id === originalId);
+      const srcBill = originalBill || bill;
+
+      // Proteção contra pagamento duplicado: se a conta (ou, no caso de recorrente,
+      // a cópia paga deste mês) já estiver paga, não lança de novo. Isso evita a
+      // duplicação que ocorre quando uma notificação desatualizada leva o usuário a
+      // marcar como paga uma conta que já foi quitada.
+      if (srcBill.status === "paid" && !srcBill.recurrence) {
+        alert(`A conta "${srcBill.title}" já está marcada como paga.`);
+        await loadBills(user.email);
+        return;
+      }
+      if (srcBill.recurrence && srcBill.recurrence !== "none") {
+        const referenceDate = new Date((bill.due_date || srcBill.due_date).slice(0, 10) + "T00:00:00");
+        const alreadyPaidIds = getPaidRecurringIdsForMonth(bills, referenceDate);
+        if (alreadyPaidIds.has(originalId)) {
+          alert(`A conta "${srcBill.title}" já foi paga neste mês.`);
+          await loadBills(user.email);
+          return;
+        }
+      }
 
       // Usa a categoria da conta diretamente (nome customizado como "Internet")
       // para que apareça corretamente no widget de gastos por categoria
-      const srcBill = originalBill || bill;
       const category = srcBill.category || "bills";
 
       await base44.entities.Transaction.create({
@@ -184,47 +152,7 @@ export default function BillsToPay() {
 
   // Filtra e expande contas recorrentes para o mês selecionado
   const filteredBills = useMemo(() => {
-    const selectedMonthKey = format(startOfMonth(selectedDate), "yyyy-MM");
-
-    // Coleta IDs das contas recorrentes originais que já têm cópia paga neste mês específico
-    // A cópia paga tem: status="paid", recurrence="none", linked_bill_id=<id da original>
-    // e due_date no mês selecionado
-    const recurringIdsPaidThisMonth = new Set();
-    bills.forEach(bill => {
-      if (
-        bill.status === "paid" &&
-        (!bill.recurrence || bill.recurrence === "none") &&
-        bill.linked_bill_id
-      ) {
-        const dueMth = bill.due_date
-          ? format(startOfMonth(new Date(bill.due_date.slice(0, 10) + "T00:00:00")), "yyyy-MM")
-          : null;
-        if (dueMth === selectedMonthKey) {
-          recurringIdsPaidThisMonth.add(bill.linked_bill_id);
-        }
-      }
-    });
-
-    const result = [];
-    bills.forEach(bill => {
-      // Contas recorrentes originais: nunca filtradas pelo status "paid" — elas sempre existem
-      // mas substituídas pela cópia paga no mês onde foram pagas
-      const isRecurringOriginal = bill.recurrence && bill.recurrence !== "none";
-
-      if (isRecurringOriginal) {
-        // Se já existe cópia paga para este mês, não exibe a original (a cópia aparece no lugar)
-        if (recurringIdsPaidThisMonth.has(bill.id)) return;
-        // Verifica se o mês selecionado é >= mês de início da conta
-        if (!billAppearsInMonth(bill, selectedDate)) return;
-        result.push(buildVirtualBill(bill, selectedDate));
-      } else {
-        // Conta não recorrente (ou cópia paga gerada): usa lógica normal
-        if (!billAppearsInMonth(bill, selectedDate)) return;
-        result.push(bill);
-      }
-    });
-
-    // Ordena por vencimento
+    const result = getBillsForMonth(bills, selectedDate);
     result.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
     return result;
   }, [bills, selectedDate]);
@@ -322,7 +250,7 @@ export default function BillsToPay() {
       </motion.div>
 
       <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditingBill(null); } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingBill ? "Editar Conta a Pagar" : "Nova Conta a Pagar"}</DialogTitle>
           </DialogHeader>
