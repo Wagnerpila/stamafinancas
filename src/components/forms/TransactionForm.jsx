@@ -287,6 +287,14 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Se a categoria já salva na transação (ex: revisão de lançamento importado
+                        por foto/PDF) não existir mais na lista atual — renomeada ou excluída —
+                        mostra o valor salvo mesmo assim, em vez de deixar o campo em branco. */}
+                    {formData.category && !(dynamicCategories[formData.type] || []).some(c => c.value === formData.category) && (
+                      <SelectItem value={formData.category}>
+                        {formData.category} (categoria removida)
+                      </SelectItem>
+                    )}
                     {(dynamicCategories[formData.type] || []).map((category) => (
                       <SelectItem key={category.value} value={category.value}>
                         {category.icon ? `${category.icon} ${category.label}` : category.label}

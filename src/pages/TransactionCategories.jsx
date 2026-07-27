@@ -132,6 +132,26 @@ export default function TransactionCategories() {
       if (editing) {
         await base44.entities.TransactionCategory.update(editing.id, catData);
         savedCatName = form.name;
+
+        // Categorias são referenciadas em outras entidades pelo nome (string), não por ID.
+        // Sem isso, renomear uma categoria "orfanava" todo lançamento antigo: ele continuava
+        // com o nome anterior salvo, que não bate mais com nenhuma categoria da lista atual
+        // — por isso o seletor de categoria ao editar uma transação aparecia em branco.
+        if (editing.name !== savedCatName) {
+          const oldName = editing.name;
+          const [orphanedTxs, orphanedBills, orphanedBudgets, orphanedCcTxs] = await Promise.all([
+            base44.entities.Transaction.filter({ category: oldName }),
+            base44.entities.Bill.filter({ category: oldName }),
+            base44.entities.CategoryBudget.filter({ category: oldName }),
+            base44.entities.CreditCardTransaction.filter({ category: oldName }),
+          ]);
+          await Promise.all([
+            ...orphanedTxs.map(t => base44.entities.Transaction.update(t.id, { category: savedCatName })),
+            ...orphanedBills.map(b => base44.entities.Bill.update(b.id, { category: savedCatName })),
+            ...orphanedBudgets.map(b => base44.entities.CategoryBudget.update(b.id, { category: savedCatName })),
+            ...orphanedCcTxs.map(t => base44.entities.CreditCardTransaction.update(t.id, { category: savedCatName })),
+          ]);
+        }
       } else {
         await base44.entities.TransactionCategory.create(catData);
       }

@@ -62,6 +62,10 @@ export default function EditTransactionDialog({ transaction, open, onClose, onSa
   };
 
   const currentCategories = allCategories.filter(c => c.type === formData.type);
+  // Se a categoria salva na transação não existir mais na lista atual (renomeada antes desta
+  // correção, ou excluída), mostra o valor salvo mesmo assim em vez de deixar o campo em
+  // branco — senão parece que a categoria "não foi salva" quando na verdade só ficou órfã.
+  const categoryIsOrphaned = formData.category && !currentCategories.some(c => c.name === formData.category);
 
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -115,6 +119,11 @@ export default function EditTransactionDialog({ transaction, open, onClose, onSa
               <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
+                  {categoryIsOrphaned && (
+                    <SelectItem value={formData.category} className="dark:text-white dark:focus:bg-slate-700">
+                      {formData.category} (categoria removida)
+                    </SelectItem>
+                  )}
                   {currentCategories.map(c => (
                     <SelectItem key={c.id} value={c.name} className="dark:text-white dark:focus:bg-slate-700">
                       {c.icon ? `${c.icon} ` : ''}{c.name}
