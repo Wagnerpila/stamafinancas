@@ -84,6 +84,12 @@ export default function TransactionChart({ transactions, creditCardTxs = [], typ
   const categoryData = React.useMemo(() => {
     const data = {};
 
+    // Resolve o valor bruto da categoria pro nome de exibição ANTES de agrupar — senão uma
+    // transação antiga com category="bills" (slug do enum antigo) e outra com category="Contas"
+    // (categoria customizada com o mesmo significado) viram duas fatias separadas no gráfico em
+    // vez de somarem numa só.
+    const resolveLabel = (raw) => categoryLabels[raw] || raw.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
     // Faturas já pagas (evita dupla contagem com CreditCardTransactions)
     const paidInvoiceIds = new Set(
       transactions.filter(t => t.invoice_id).map(t => t.invoice_id)
@@ -92,22 +98,19 @@ export default function TransactionChart({ transactions, creditCardTxs = [], typ
     // Transações normais de despesa apenas
     transactions.forEach(transaction => {
       if (transaction.type !== "expense" || transaction.is_food_voucher) return;
-      const category = transaction.category;
-      data[category] = (data[category] || 0) + Math.abs(transaction.amount);
+      const name = resolveLabel(transaction.category);
+      data[name] = (data[name] || 0) + Math.abs(transaction.amount);
     });
 
     // Transações de cartão — apenas de faturas não pagas
     creditCardTxs.forEach(t => {
       if (t.invoice_id && paidInvoiceIds.has(t.invoice_id)) return;
-      const category = t.category || "other_expense";
-      data[category] = (data[category] || 0) + Math.abs(t.amount || 0);
+      const name = resolveLabel(t.category || "other_expense");
+      data[name] = (data[name] || 0) + Math.abs(t.amount || 0);
     });
-    
+
     return Object.entries(data)
-      .map(([key, value]) => ({ 
-        name: categoryLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
-        value 
-      }))
+      .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 8);
   }, [transactions, creditCardTxs]);

@@ -27,6 +27,20 @@ function budgetGradient(pctOfLimit) {
   return `rgb(${r},${g},${b})`;
 }
 
+// Labels padrão para categorias do enum antigo (fallback para transações salvas antes de
+// existirem categorias customizadas por nome, ex: category: "bills").
+const ENUM_LABELS = {
+  food: { name: "Alimentação", icon: "🍽️", color: "#f97316" },
+  transport: { name: "Transporte", icon: "🚗", color: "#f59e0b" },
+  health: { name: "Saúde", icon: "❤️", color: "#ec4899" },
+  education: { name: "Educação", icon: "📚", color: "#8b5cf6" },
+  entertainment: { name: "Lazer", icon: "🎬", color: "#06b6d4" },
+  shopping: { name: "Compras", icon: "🛍️", color: "#2563eb" },
+  bills: { name: "Contas", icon: "📄", color: "#16a34a" },
+  rent: { name: "Aluguel", icon: "🏠", color: "#9333ea" },
+  other_expense: { name: "Outras Despesas", icon: "📦", color: "#64748b" },
+};
+
 export default function CategorySpendingCompact({ transactions = [], creditCardTxs = [], budgets = [], selectedDate }) {
   const [dbCategories, setDbCategories] = useState([]);
 
@@ -37,6 +51,18 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
         .catch(() => {});
     }).catch(() => {});
   }, []);
+
+  // Resolve o valor bruto salvo em transaction.category pro nome de exibição da categoria.
+  // Sem isso, uma transação antiga com category="bills" (slug do enum antigo) e uma transação
+  // nova com category="Contas" (categoria customizada com o mesmo significado) eram somadas em
+  // grupos separados — aparecendo como dois cards "Contas" em vez de um só somado.
+  const resolveCategoryName = (raw, dbCats) => {
+    if (!raw) return "Outros";
+    const dbMatch = dbCats.find(c => c.name === raw);
+    if (dbMatch) return dbMatch.name;
+    if (ENUM_LABELS[raw]) return ENUM_LABELS[raw].name;
+    return raw;
+  };
 
   const spending = useMemo(() => {
     const ref = selectedDate || new Date();
@@ -51,7 +77,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
       if (!d || isNaN(d)) return;
       if (d.getMonth() !== ref.getMonth() || d.getFullYear() !== ref.getFullYear()) return;
-      const key = t.category || "Outros";
+      const key = resolveCategoryName(t.category, dbCategories);
       map[key] = (map[key] || 0) + Math.abs(t.amount || 0);
     });
 
@@ -61,40 +87,31 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
       if (!d || isNaN(d)) return;
       if (d.getMonth() !== ref.getMonth() || d.getFullYear() !== ref.getFullYear()) return;
-      const key = t.category || "Outros";
+      const key = resolveCategoryName(t.category, dbCategories);
       map[key] = (map[key] || 0) + Math.abs(t.amount || 0);
     });
 
     return map;
-  }, [transactions, creditCardTxs, selectedDate]);
+  }, [transactions, creditCardTxs, selectedDate, dbCategories]);
 
   const totalSpent = Object.values(spending).reduce((s, v) => s + v, 0);
 
-  // Monta lista de categorias visíveis: une categorias do banco com as que aparecem nas transações
+  // Monta lista de categorias visíveis: une categorias do banco com as que aparecem nas
+  // transações. `spending` já está agrupado por nome de exibição resolvido (ver acima), então
+  // basta uma entrada de metadados (ícone/cor) por nome — sem risco de duplicar o mesmo nome
+  // sob duas chaves diferentes.
   const visible = useMemo(() => {
     const catMap = {};
 
     // Categorias do banco (com ícone e cor)
     dbCategories.forEach(c => { catMap[c.name] = { name: c.name, icon: c.icon, color: c.color }; });
 
-    // Labels padrão para categorias do enum (fallback para quando foram salvas pelo código antigo)
-    const enumLabels = {
-      food: { name: "Alimentação", icon: "🍽️", color: "#f97316" },
-      transport: { name: "Transporte", icon: "🚗", color: "#f59e0b" },
-      health: { name: "Saúde", icon: "❤️", color: "#ec4899" },
-      education: { name: "Educação", icon: "📚", color: "#8b5cf6" },
-      entertainment: { name: "Lazer", icon: "🎬", color: "#06b6d4" },
-      shopping: { name: "Compras", icon: "🛍️", color: "#2563eb" },
-      bills: { name: "Contas", icon: "📄", color: "#16a34a" },
-      rent: { name: "Aluguel", icon: "🏠", color: "#9333ea" },
-      other_expense: { name: "Outras Despesas", icon: "📦", color: "#64748b" },
-    };
-
-    // Categorias que aparecem nos gastos mas não estão no banco
+    // Categorias que aparecem nos gastos mas não estão no banco (ex: categoria excluída depois,
+    // ou resolvida via ENUM_LABELS)
     Object.keys(spending).forEach(key => {
       if (!catMap[key]) {
-        // Tenta o mapa de enum primeiro, senão usa o nome bruto
-        catMap[key] = enumLabels[key] || { name: key, icon: "📦", color: "#64748b" };
+        const enumEntry = Object.values(ENUM_LABELS).find(e => e.name === key);
+        catMap[key] = enumEntry || { name: key, icon: "📦", color: "#64748b" };
       }
     });
 

@@ -71,7 +71,6 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
   const [receivableDueDate, setReceivableDueDate] = useState('');
   const [repeatEnabled, setRepeatEnabled] = useState(false);
   const [repeatFrequency, setRepeatFrequency] = useState('monthly');
-  const [repeatCount, setRepeatCount] = useState('11');
   const [creditCards, setCreditCards] = useState([]);
   const [selectedCard, setSelectedCard] = useState(null);
   const [cardLimit, setCardLimit] = useState(null);
@@ -157,19 +156,13 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
     setError(''); // Clear previous errors
 
     const isRepeating = !initialData && repeatEnabled;
-    const repeatCountNum = isRepeating ? Math.max(0, parseInt(repeatCount, 10) || 0) : 0;
 
-    // Check transaction limit for new transactions (not edits) — conta também os lançamentos
-    // futuros que a recorrência vai gerar, senão o usuário estoura o limite do plano sem aviso.
+    // Check transaction limit for new transactions (not edits)
     if (!initialData && transactionLimit > 0) {
       try {
         const existingTransactions = await Transaction.filter({ created_by: user?.email });
-        if (existingTransactions.length + 1 + repeatCountNum > transactionLimit) {
-          setError(
-            repeatCountNum > 0
-              ? `Essa transação + a repetição gerariam ${1 + repeatCountNum} lançamentos, mas seu plano só permite mais ${Math.max(transactionLimit - existingTransactions.length, 0)}. Reduza as repetições ou faça upgrade para Premium.`
-              : "Limite de transações atingido para o plano gratuito. Faça upgrade para Premium."
-          );
+        if (existingTransactions.length >= transactionLimit) {
+          setError("Limite de transações atingido para o plano gratuito. Faça upgrade para Premium.");
           return; // Stop form submission
         }
       } catch (error) {
@@ -188,16 +181,24 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
     try {
       await onSubmit(processedData);
 
-      // Repetir esta transação nos próximos meses/trimestres/anos: gera de uma vez os
-      // lançamentos futuros (a Transaction não tem um mecanismo de recorrência "virtual" como as
-      // contas a pagar/receber — aqui cada mês vira um registro real desde já).
-      if (isRepeating && repeatCountNum > 0) {
+      // Repetir esta transação nos próximos meses/trimestres/anos: em vez de já criar cada mês
+      // futuro como uma Transaction real (o que descontava do saldo e inflava "Gastos por
+      // Categoria" antes mesmo de o mês chegar), gera uma conta a pagar/receber recorrente a
+      // partir do próximo ciclo — a mesma lógica que já projeta corretamente mês a mês em
+      // "Contas a Pagar/Receber" e "Compromissos Futuros", e só vira transação (e só desconta do
+      // saldo) quando o usuário marcar aquele mês como pago/recebido.
+      if (isRepeating) {
         const intervalMonths = REPEAT_INTERVAL_MONTHS[repeatFrequency] || 1;
-        const futureItems = Array.from({ length: repeatCountNum }, (_, i) => ({
-          ...processedData,
-          date: toLocalISOString(addMonthsToDateString(formData.date, intervalMonths * (i + 1))),
-        }));
-        await Transaction.bulkCreate(futureItems);
+        const nextDueDate = addMonthsToDateString(formData.date, intervalMonths);
+        await base44.entities.Bill.create({
+          title: formData.description,
+          description: formData.notes || '',
+          amount: processedData.amount,
+          type: formData.type === 'income' ? 'receivable' : 'payable',
+          category: formData.category,
+          due_date: toLocalISOString(nextDueDate),
+          recurrence: repeatFrequency,
+        });
       }
 
       // If user wants to also create a bill to pay
@@ -473,39 +474,31 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
               <div className="flex items-center justify-between p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
                 <div className="space-y-0.5">
                   <Label htmlFor="repeat-transaction" className="font-medium text-slate-900 dark:text-slate-100">Repetir Transação</Label>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Gerar esta {formData.type === 'income' ? 'receita' : 'despesa'} automaticamente em outros meses</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Criar uma conta a {formData.type === 'income' ? 'receber' : 'pagar'} recorrente pros próximos meses
+                  </p>
                 </div>
                 <Switch id="repeat-transaction" checked={repeatEnabled} onCheckedChange={setRepeatEnabled} />
               </div>
             )}
 
             {!initialData && repeatEnabled && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="font-medium text-slate-700 dark:text-slate-200">Frequência</Label>
-                  <Select value={repeatFrequency} onValueChange={setRepeatFrequency}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {repeatFrequencyOptions.map(o => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-medium text-slate-700 dark:text-slate-200">Quantas vezes repetir</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="60"
-                    step="1"
-                    value={repeatCount}
-                    onChange={e => setRepeatCount(e.target.value)}
-                    required
-                  />
-                </div>
-                <p className="col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
-                  Serão criados mais {Math.max(0, parseInt(repeatCount, 10) || 0)} lançamento(s) idêntico(s) a este, um a cada {repeatFrequency === 'monthly' ? 'mês' : repeatFrequency === 'quarterly' ? 'trimestre' : 'ano'}, além do de hoje.
+              <div className="space-y-2">
+                <Label className="font-medium text-slate-700 dark:text-slate-200">Frequência</Label>
+                <Select value={repeatFrequency} onValueChange={setRepeatFrequency}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {repeatFrequencyOptions.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Esta transação de hoje é lançada normalmente. A partir do próximo ciclo
+                  ({repeatFrequency === 'monthly' ? 'mês' : repeatFrequency === 'quarterly' ? 'trimestre' : 'ano'}),
+                  ela vira uma conta a {formData.type === 'income' ? 'receber' : 'pagar'} recorrente — aparece em
+                  "Contas a {formData.type === 'income' ? 'Receber' : 'Pagar'}" e nos compromissos futuros, mas só
+                  entra no saldo quando você marcar cada mês como {formData.type === 'income' ? 'recebido' : 'pago'}.
                 </p>
               </div>
             )}
