@@ -121,7 +121,9 @@ Para cada lançamento, extraia:
 - description: descrição completa da compra/lançamento (sem a info de parcela)
 - amount: valor numérico positivo desta linha (sem R$, sem vírgulas — use ponto como decimal)
 - installment_info: informação de parcela se houver (ex: "2/12", "03/06"), ou null
-- date: data do lançamento no formato MM/DD (ex: "03/15") ou YYYY-MM-DD se disponível
+- date: data do lançamento SEMPRE no formato YYYY-MM-DD. Faturas brasileiras imprimem a data como
+  DD/MM (dia primeiro) — se o ano não estiver impresso na linha, use o ano do mês de referência da
+  fatura (reference_month abaixo). Nunca retorne só "DD/MM" sem ano.
 - category: categoria sugerida em português. ${categoriesBlock}
 
 Retorne também:

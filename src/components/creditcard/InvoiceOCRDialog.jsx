@@ -8,6 +8,34 @@ import { readInvoiceOCR } from "@/functions/readInvoiceOCR";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { EXPENSE_CATEGORIES } from "@/lib/categories";
 
+// Normaliza a data de um lançamento extraído pela IA pra "YYYY-MM-DD". Faturas brasileiras
+// imprimem a data como DD/MM (sem ano); a IA às vezes repassa isso literalmente em vez de
+// completar o ano, e mandar isso direto pro banco quebra o insert (Prisma exige ISO-8601 válido).
+function normalizeInvoiceDate(dateStr, referenceMonth) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+
+  // DD/MM ou DD/MM/AAAA (ou AA de 2 dígitos) — padrão brasileiro, dia primeiro
+  const brMatch = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (brMatch) {
+    const day = brMatch[1].padStart(2, "0");
+    const month = brMatch[2].padStart(2, "0");
+    if (Number(day) > 31 || Number(month) > 12) return null;
+    let year = brMatch[3];
+    if (!year) {
+      year = referenceMonth?.slice(0, 4) || String(new Date().getFullYear());
+    } else if (year.length === 2) {
+      year = `20${year}`;
+    }
+    return `${year}-${month}-${day}`;
+  }
+
+  const parsed = new Date(s);
+  return isNaN(parsed) ? null : parsed.toISOString().split("T")[0];
+}
+
 // Parseia formatos: "2/12", "04/10", "PAR 03/06", "3 de 10", "PARC 2/5" → { current, total }
 function parseInstallment(info) {
   if (!info) return null;
@@ -134,7 +162,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
           description: it.description,
           amount: it.amount,
           category: it.category,
-          purchase_date: it.date || today,
+          purchase_date: normalizeInvoiceDate(it.date, result.reference_month) || today,
           installments: parsed?.total || 1,
           installment_number: parsed?.current || 1,
           notes: notesWithInstallment
