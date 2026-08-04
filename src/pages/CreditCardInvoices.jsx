@@ -180,10 +180,11 @@ export default function CreditCardInvoices() {
             const remaining = total - current;
             if (remaining <= 0) continue;
 
+            // Ancora no vencimento da PRÓPRIA fatura sendo paga, não em "hoje" — senão pagar uma
+            // fatura atrasada desalinhava o cronograma das parcelas futuras restantes.
+            const dueAnchor = new Date(invoice.due_date.slice(0, 10) + "T00:00:00");
             for (let offset = 1; offset <= remaining; offset++) {
-              const futureDate = new Date();
-              futureDate.setMonth(futureDate.getMonth() + offset);
-              futureDate.setDate(card.due_day || 10);
+              const futureDate = new Date(dueAnchor.getFullYear(), dueAnchor.getMonth() + offset, card.due_day || 10);
               billsToCreate.push({
                 title: `${tx.description} — Parcela ${current + offset}/${total}`,
                 description: `Parcela ${current + offset} de ${total} · Cartão ${card.name}`,
@@ -271,12 +272,25 @@ export default function CreditCardInvoices() {
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-0 shadow-lg bg-blue-50 dark:bg-blue-900/20 mb-6">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-300 mb-1">Compras não Faturadas</p>
                   <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">R$ {unbilledAmount.toFixed(2)}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Compras lançadas neste cartão que ainda não entraram em nenhuma fatura
+                  </p>
                 </div>
-                <FileText className="w-12 h-12 text-blue-600" />
+                <div className="flex flex-col items-end gap-2">
+                  <FileText className="w-10 h-10 text-blue-600" />
+                  <Button
+                    size="sm"
+                    onClick={generateInvoice}
+                    disabled={generatingInvoice}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {generatingInvoice ? "Gerando..." : "Gerar Fatura"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
