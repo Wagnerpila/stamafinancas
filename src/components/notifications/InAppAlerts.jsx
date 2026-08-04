@@ -48,12 +48,14 @@ export default function InAppAlerts() {
           dueDate.setHours(0, 0, 0, 0);
 
           if (dueDate < today) {
-            // Conta vencida
+            // Conta vencida — usa o vencimento projetado (effectiveDueDate), não o due_date
+            // original da conta recorrente, que pode ser de meses/anos atrás e faria o texto
+            // "há X tempo" mostrar uma data completamente errada.
             newAlerts.push({
               id: `bill-overdue-${bill.id}`,
               type: 'overdue',
               message: `Conta "${bill.title}" está vencida`,
-              date: bill.due_date,
+              date: effectiveDueDate,
               url: createPageUrl(bill.type === 'payable' ? "BillsToPay" : "BillsToReceive"),
               priority: 1
             });

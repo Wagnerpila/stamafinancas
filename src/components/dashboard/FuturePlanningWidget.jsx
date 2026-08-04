@@ -6,6 +6,7 @@ import { createPageUrl } from "@/utils";
 import { addMonths, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CreditCard, ChevronRight, Zap } from "lucide-react";
+import { billAppearsInMonth, getPaidRecurringIdsForMonth } from "../lib/billRecurrence";
 
 function formatBRL(v) {
   return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -17,28 +18,14 @@ export default function FuturePlanningWidget({ bills = [] }) {
     []
   );
 
-  // IDs de contas recorrentes que já foram pagas em cada mês
-  // (cópia paga: status="paid", recurrence="none", linked_bill_id=<id_original>)
-  const paidRecurringByMonth = useMemo(() => {
-    const map = {}; // { "yyyy-MM": Set([originalId, ...]) }
-    bills.forEach(b => {
-      if (b.status === "paid" && (!b.recurrence || b.recurrence === "none") && b.linked_bill_id && b.due_date) {
-        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
-        if (!isNaN(d)) {
-          const key = format(startOfMonth(d), "yyyy-MM");
-          if (!map[key]) map[key] = new Set();
-          map[key].add(b.linked_bill_id);
-        }
-      }
-    });
-    return map;
-  }, [bills]);
-
   const summary = useMemo(() => {
     return months.map(m => {
       const key = format(m, "yyyy-MM");
       const label = format(m, "MMM/yy", { locale: ptBR });
-      const paidIds = paidRecurringByMonth[key] || new Set();
+      // IDs de contas recorrentes que já têm cópia paga neste mês específico — mesma lógica
+      // (e mesma fonte) usada em BillsToPay/BillsToReceive, evitando reimplementar aqui um
+      // cálculo de recorrência divergente que só cobria "monthly" e ignorava trimestral/anual.
+      const paidIds = getPaidRecurringIdsForMonth(bills, m);
 
       // Parcelas futuras de cartão
       const installmentBills = bills.filter(b => {
@@ -51,19 +38,19 @@ export default function FuturePlanningWidget({ bills = [] }) {
       });
       const ccTotal = installmentBills.reduce((s, b) => s + (b.amount || 0), 0);
 
-      // Contas recorrentes mensais — exclui as já pagas neste mês
+      // Contas recorrentes (mensal/trimestral/anual) que caem neste mês, excluindo as já pagas
       const recurringBills = bills.filter(b => {
         if (b.type !== "payable" || b.status === "paid") return false;
-        if (b.recurrence !== "monthly") return false;
+        if (!b.recurrence || b.recurrence === "none") return false;
         if (paidIds.has(b.id)) return false; // já paga neste mês
-        return true;
+        return billAppearsInMonth(b, m);
       });
       const billTotal = recurringBills.reduce((s, b) => s + (b.amount || 0), 0);
 
       const total = ccTotal + billTotal;
       return { key, label, ccTotal, recurring: billTotal, total };
     });
-  }, [months, bills, paidRecurringByMonth]);
+  }, [months, bills]);
 
   return (
     <Card className="border-0 shadow-lg border-l-4 border-indigo-500">

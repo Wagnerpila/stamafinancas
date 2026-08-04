@@ -25,6 +25,7 @@ import FuturePlanningWidget from "../components/dashboard/FuturePlanningWidget";
 import CategorySpendingCompact from "../components/dashboard/CategorySpendingCompact";
 import MonthFilter from "../components/common/MonthFilter";
 import PullToRefresh from "../components/mobile/PullToRefresh";
+import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,6 +72,11 @@ export default function Dashboard() {
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // Reconsulta ao voltar de outra tela via bfcache/segundo plano (comum no mobile) — senão o
+  // Dashboard fica preso nos dados de antes de, por exemplo, cadastrar uma conta recorrente em
+  // "Contas a Pagar" e voltar, mostrando "Compromissos Futuros" desatualizado.
+  useRefreshOnForeground(loadInitialData);
 
   // Filter transactions to selected month or year
   const monthlyTransactions = useMemo(() => {

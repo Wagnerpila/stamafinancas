@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import BillForm from "../components/bills/BillForm.jsx";
 import BillsList from "../components/bills/BillsList";
 import MonthFilter from "../components/common/MonthFilter";
 import { getBillsForMonth, getPaidRecurringIdsForMonth } from "../components/lib/billRecurrence";
+import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
 
 export default function BillsToReceive() {
   const [bills, setBills] = useState([]);
@@ -17,6 +18,10 @@ export default function BillsToReceive() {
   const [editingBill, setEditingBill] = useState(null);
   const [user, setUser] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  // IDs de contas com recebimento em andamento — evita que um duplo-toque/duplo-clique (comum
+  // no mobile, onde o app não dá feedback imediato de "carregando") dispare handleMarkAsPaid
+  // duas vezes antes da primeira chamada terminar e recarregar a lista, duplicando a transação.
+  const payingRef = useRef(new Set());
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -32,6 +37,10 @@ export default function BillsToReceive() {
     };
     loadInitialData();
   }, []);
+
+  // Reconsulta ao voltar de outra tela via bfcache/segundo plano (comum no mobile) — senão a
+  // lista fica presa em "vencida" mesmo depois de a conta ter sido recebida em outra navegação.
+  useRefreshOnForeground(() => { if (user?.email) loadBills(user.email); });
 
   const loadBills = async (userEmail) => {
     if (!userEmail) return;
@@ -78,6 +87,13 @@ export default function BillsToReceive() {
   };
 
   const handleMarkAsPaid = async (bill) => {
+    const originalId = bill._originalId || bill.id;
+
+    // Trava contra chamada concorrente da mesma conta (duplo-toque/duplo-clique): a primeira
+    // chamada só libera a trava depois que loadBills() recarrega a lista com o novo status.
+    if (payingRef.current.has(originalId)) return;
+    payingRef.current.add(originalId);
+
     try {
       if (!user) {
         console.error("Usuário não encontrado");
@@ -86,7 +102,6 @@ export default function BillsToReceive() {
       }
 
       const today = new Date().toISOString().split('T')[0];
-      const originalId = bill._originalId || bill.id;
       const originalBill = bills.find(b => b.id === originalId);
       const srcBill = originalBill || bill;
 
@@ -94,12 +109,15 @@ export default function BillsToReceive() {
       // a cópia paga deste mês) já estiver marcada como recebida, não lança de novo. Isso
       // evita a duplicação que ocorre quando uma notificação desatualizada leva o usuário a
       // marcar como recebida uma conta que já foi quitada.
-      if (srcBill.status === "paid" && !srcBill.recurrence) {
+      // (recurrence pode vir "none" em vez de vazio/undefined — !srcBill.recurrence sozinho não
+      // cobre esse caso e deixava uma conta avulsa já paga passar direto pelas duas proteções)
+      const hasRecurrence = srcBill.recurrence && srcBill.recurrence !== "none";
+      if (srcBill.status === "paid" && !hasRecurrence) {
         alert(`A conta "${srcBill.title}" já está marcada como recebida.`);
         await loadBills(user.email);
         return;
       }
-      if (srcBill.recurrence && srcBill.recurrence !== "none") {
+      if (hasRecurrence) {
         const referenceDate = new Date((bill.due_date || srcBill.due_date).slice(0, 10) + "T00:00:00");
         const alreadyPaidIds = getPaidRecurringIdsForMonth(bills, referenceDate);
         if (alreadyPaidIds.has(originalId)) {
@@ -129,9 +147,7 @@ export default function BillsToReceive() {
         });
       }
 
-      const isRecurring = srcBill.recurrence && srcBill.recurrence !== "none";
-
-      if (isRecurring) {
+      if (hasRecurrence) {
         // Conta recorrente: cria cópia paga apenas para o mês específico, NÃO altera a original
         await base44.entities.Bill.create({
           title: srcBill.title,
@@ -162,6 +178,8 @@ export default function BillsToReceive() {
     } catch (error) {
       console.error("Erro detalhado ao marcar como recebida:", error);
       alert(`Erro ao marcar conta como recebida: ${error.message}`);
+    } finally {
+      payingRef.current.delete(originalId);
     }
   };
 

@@ -2,6 +2,7 @@ import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { prisma } from '../lib/prisma.js';
 import { requireAIProvider } from '../services/ai/index.js';
 import { enforceTransactionLimit } from '../services/entityConfig.js';
+import { reconcilePendingBill } from '../services/billReconciliation.js';
 import { transactionExtractionSchema, receiptOcrPrompt } from '../services/ai/prompts.js';
 import { phoneVariantsFromKey } from './phone.js';
 
@@ -118,6 +119,24 @@ export async function handleIncomingMessage(sock, msg) {
   const category = output.category || (type === 'income' ? 'Outras Receitas' : 'Outras Despesas');
   const dateStr = /^\d{4}-\d{2}-\d{2}/.test(output.date || '') ? output.date : new Date().toISOString();
 
+  // Se a foto/PDF corresponde a uma conta a pagar/receber pendente (mesmo título e valor),
+  // marca essa conta como paga e linka a transação a ela — em vez de deixá-la "solta". Sem
+  // isso a conta continua aparecendo como vencida no app (o sino de notificações insiste nela)
+  // e, se o usuário depois usar "Marcar como Paga" pra fazer a notificação parar, uma SEGUNDA
+  // transação é lançada pro mesmo pagamento, duplicando a despesa/receita.
+  let linkedBillId = null;
+  try {
+    linkedBillId = await reconcilePendingBill({
+      userId: user.id,
+      description: output.description,
+      amount: output.amount,
+      type,
+      dateStr,
+    });
+  } catch (err) {
+    console.error('[whatsapp] Erro ao reconciliar com conta pendente:', err);
+  }
+
   const transaction = await prisma.transaction.create({
     data: {
       description: output.description || 'Lançamento via WhatsApp',
@@ -129,15 +148,21 @@ export async function handleIncomingMessage(sock, msg) {
       notes: output.notes || 'Lançado automaticamente via bot do WhatsApp.',
       user_id: user.id,
       created_by: user.email,
+      ...(linkedBillId ? { linked_bill_id: linkedBillId } : {}),
     },
   });
+
+  const billNotice = linkedBillId
+    ? `\n\n📌 Encontrei uma conta pendente com esse título e valor e já marquei ela como paga.`
+    : '';
 
   await reply(
     `✅ Lançamento registrado!\n\n` +
       `${type === 'income' ? '💰 Receita' : '💸 Despesa'}: *${transaction.description}*\n` +
       `Valor: *R$ ${formatBRL(transaction.amount)}*\n` +
       `Categoria: ${transaction.category}\n` +
-      `Data: ${formatDateBR(transaction.date.toISOString())}\n\n` +
-      `Se algo estiver errado, você pode editar ou apagar direto no app.`
+      `Data: ${formatDateBR(transaction.date.toISOString())}` +
+      billNotice +
+      `\n\nSe algo estiver errado, você pode editar ou apagar direto no app.`
   );
 }
