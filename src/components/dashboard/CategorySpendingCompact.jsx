@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ChevronRight, ChevronDown, Tag, Receipt, CreditCard, X } from "lucide-react";
+import { ChevronRight, ChevronDown, Tag, Receipt, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
@@ -180,86 +180,71 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
             const barColor = limitPct !== null ? budgetGradient(limitPct) : (cat.color || "#3b82f6");
             const barWidth = limit && limit > 0 ? Math.min((spent / limit) * 100, 100) : Math.min(pct, 100);
             const isExpanded = expandedCategory === cat.name;
-            const itemCount = (itemsByCategory[cat.name] || []).length;
+            const items = itemsByCategory[cat.name] || [];
+            const itemCount = items.length;
             return (
-              <button
-                key={cat.name}
-                type="button"
-                onClick={() => setExpandedCategory(prev => (prev === cat.name ? null : cat.name))}
-                className={`text-left bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${isExpanded ? "ring-2 ring-offset-1 ring-blue-400 dark:ring-offset-slate-800" : ""}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
-                    style={{ backgroundColor: (isOver ? "#ef4444" : (cat.color || "#3b82f6")) + "22" }}
-                  >
-                    {cat.icon || "📦"}
+              <div key={cat.name} className="bg-slate-50 dark:bg-slate-700/50 rounded-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setExpandedCategory(prev => (prev === cat.name ? null : cat.name))}
+                  className={`w-full text-left p-3 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${isExpanded ? "ring-2 ring-inset ring-blue-400" : ""}`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
+                      style={{ backgroundColor: (isOver ? "#ef4444" : (cat.color || "#3b82f6")) + "22" }}
+                    >
+                      {cat.icon || "📦"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate flex items-center gap-1">
+                        {cat.name}
+                        {itemCount > 0 && (
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${isExpanded ? "rotate-180" : ""}`} />
+                        )}
+                      </p>
+                      <p className="text-xs font-medium" style={{ color: isOver ? "#ef4444" : (cat.color || "#3b82f6") }}>
+                        R$ {formatBRL(spent)}
+                        {limit && <span className="text-slate-400 dark:text-slate-500"> / R$ {formatBRL(limit)}</span>}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate flex items-center gap-1">
-                      {cat.name}
-                      {itemCount > 0 && (
-                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${isExpanded ? "rotate-180" : ""}`} />
-                      )}
-                    </p>
-                    <p className="text-xs font-medium" style={{ color: isOver ? "#ef4444" : (cat.color || "#3b82f6") }}>
-                      R$ {formatBRL(spent)}
-                      {limit && <span className="text-slate-400 dark:text-slate-500"> / R$ {formatBRL(limit)}</span>}
-                    </p>
+                  <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-1.5">
+                    <div
+                      className="h-1.5 rounded-full transition-all duration-500"
+                      style={{ width: `${barWidth}%`, backgroundColor: barColor }}
+                    />
                   </div>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-1.5">
-                  <div
-                    className="h-1.5 rounded-full transition-all duration-500"
-                    style={{ width: `${barWidth}%`, backgroundColor: barColor }}
-                  />
-                </div>
-                {isOver && (
-                  <p className="text-xs text-red-500 mt-1.5">⚠️ +R$ {formatBRL(overAmount)} acima do limite</p>
+                  {isOver && (
+                    <p className="text-xs text-red-500 mt-1.5">⚠️ +R$ {formatBRL(overAmount)} acima do limite</p>
+                  )}
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-3 animate-in fade-in duration-200">
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                      {items.map(item => (
+                        <div key={item.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {item.source === "creditcard"
+                              ? <CreditCard className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              : <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            }
+                            <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
+                            <span className="text-sm font-medium text-red-600 dark:text-red-400">R$ {formatBRL(item.amount)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
-
-        {expandedCategory && (
-          // Renderização condicional simples (sem animar height:"auto" do framer-motion) — essa
-          // técnica mede scrollHeight via JS e, em pelo menos um caso real testado (Samsung
-          // Internet no Android), o estado mudava (o card ficava destacado) mas o painel nunca
-          // chegava a aparecer. Um fade simples via classe utilitária evita essa medição.
-          <div className="mt-3 p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 animate-in fade-in slide-in-from-top-1 duration-200">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                Lançamentos em "{expandedCategory}"
-              </p>
-              <button
-                type="button"
-                onClick={() => setExpandedCategory(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                aria-label="Fechar"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {(itemsByCategory[expandedCategory] || []).map(item => (
-                <div key={item.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {item.source === "creditcard"
-                      ? <CreditCard className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      : <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    }
-                    <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
-                    <span className="text-sm font-medium text-red-600 dark:text-red-400">R$ {formatBRL(item.amount)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { base44 } from "@/api/base44Client";
+import { UploadFile, statementImport } from "@/api/integrations";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, Upload, Loader2, AlertCircle } from "lucide-react";
@@ -48,55 +48,13 @@ export default function ImportStatement() {
     setIsProcessing(true);
     setError(null);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await UploadFile({ file });
 
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Você é um especialista em leitura de extratos bancários brasileiros.
-Analise este extrato bancário e extraia TODAS as transações encontradas.
+      // Prompt/schema vivem no backend (server/src/services/ai/prompts.js) — aqui só chama o
+      // endpoint /api/ai/statement-import, que usa o provedor de IA configurado no servidor.
+      const result = await statementImport(file_url);
 
-REGRAS CRÍTICAS para determinar se é RECEITA (income) ou DESPESA (expense):
-
-1. VALORES NEGATIVOS (com sinal "-" ou entre parênteses) = SEMPRE "expense"
-2. VALORES POSITIVOS (sem sinal ou com "+") = "income" se for salário/transferência recebida/PIX recebido, senão avalie o contexto
-3. COLUNA "DÉBITO" ou texto "DÉB", "D" ao lado = SEMPRE "expense"
-4. COLUNA "CRÉDITO" ou texto "CRÉ", "C" ao lado = SEMPRE "income"
-5. PALAVRAS que indicam DESPESA: pagamento, compra, saque, débito, tarifa, taxa, ted enviado, pix enviado, transferência enviada, fatura, boleto, doc enviado
-6. PALAVRAS que indicam RECEITA: salário, depósito, crédito, pix recebido, ted recebido, transferência recebida, rendimento, estorno, reembolso, doc recebido
-7. Se o valor aparecer em VERMELHO ou formatação de débito = "expense"
-8. Em extratos de CARTÃO DE CRÉDITO: todas as compras são "expense", pagamentos da fatura são "income"
-9. Em caso de dúvida genuína, use "expense"
-
-Para cada transação extraia:
-- description: descrição completa (sem símbolos de valor)
-- amount: valor SEMPRE positivo (número sem sinal, sem R$, use ponto como decimal)
-- type: "income" ou "expense" conforme as regras acima
-- date: data no formato YYYY-MM-DD
-- category: categoria sugerida. Para expense: food, transport, health, education, entertainment, shopping, bills, other_expense. Para income: salary, freelance, investment, other_income
-
-Ignore linhas de saldo, totais, cabeçalhos e rodapés.
-Retorne JSON válido com todas as transações encontradas.`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            transactions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  description: { type: "string" },
-                  amount: { type: "number" },
-                  type: { type: "string" },
-                  date: { type: "string" },
-                  category: { type: "string" }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      const transactions = result?.transactions;
+      const transactions = result?.status === "success" ? result.output?.transactions : null;
       if (transactions?.length > 0) {
         navigate(createPageUrl("ReviewImportedTransactions"), { state: { transactions } });
       } else {
