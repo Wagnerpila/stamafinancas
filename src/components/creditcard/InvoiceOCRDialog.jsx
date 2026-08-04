@@ -209,14 +209,17 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
       }
 
       // 2. Criar fatura automaticamente
-      const closingDate = new Date();
-      const dueDate = new Date();
-      dueDate.setMonth(dueDate.getMonth() + 1);
-      dueDate.setDate(card.due_day || 10);
-      closingDate.setDate(card.closing_day || closingDate.getDate());
-
+      // Ancora as datas no mês de referência da PRÓPRIA fatura (reference_month), não em "hoje"
+      // — importar uma fatura atrasada ou de meses passados fazia todo o cronograma de vencimento
+      // e das parcelas futuras (abaixo) se basear na data de hoje, e não no ciclo real da fatura.
       const referenceMonth = result.reference_month ||
         `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+      const refMatch = referenceMonth.match(/^(\d{4})-(\d{2})/);
+      const refYear = refMatch ? Number(refMatch[1]) : new Date().getFullYear();
+      const refMonthIndex = refMatch ? Number(refMatch[2]) - 1 : new Date().getMonth();
+
+      const closingDate = new Date(refYear, refMonthIndex, card.closing_day || 1);
+      const dueDate = new Date(refYear, refMonthIndex + 1, card.due_day || 10);
 
       const totalAmount = selectedItems.reduce((s, it) => s + it.amount, 0);
 
@@ -256,9 +259,9 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
           );
           if (alreadyRecorded || alreadyBilled) continue;
 
-          const futureDate = new Date();
-          futureDate.setMonth(futureDate.getMonth() + offset);
-          futureDate.setDate(card.due_day || 10);
+          // Cada parcela futura vence um mês após a anterior, a partir do vencimento desta
+          // fatura (dueDate já ancorado no reference_month acima) — não a partir de hoje.
+          const futureDate = new Date(dueDate.getFullYear(), dueDate.getMonth() + offset, card.due_day || 10);
           const dueDateStr = futureDate.toISOString().split("T")[0];
           billsToCreate.push({
             title: `${it.description} — Parcela ${installmentNumber}/${total}`,
