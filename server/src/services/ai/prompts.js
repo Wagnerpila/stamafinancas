@@ -111,9 +111,17 @@ Analise a imagem ou PDF da fatura do cartão "${cardName || 'cartão de crédito
 
 IMPORTANTE sobre parcelas:
 - Lançamentos parcelados aparecem com indicação como "2/12", "PAR 03/06", "3 de 10" etc.
+- ATENÇÃO: em muitas faturas essa indicação de parcela vem GRUDADA no nome do estabelecimento,
+  sem espaço (ex: "CLAUDINEIA APARECIDA02/02" é o estabelecimento "CLAUDINEIA APARECIDA" + parcela
+  "02/02"; "AMAZONMKTPLC*AFCCOME09/10" é "AMAZONMKTPLC*AFCCOME" + parcela "09/10"). Sempre que o
+  final da descrição terminar em dois números separados por barra (com ou sem espaço entre eles,
+  ex: "02/02", "09/1 0", "09/ 10"), separe isso como installment_info e remova do description.
 - Extraia cada parcela como um lançamento individual com seu valor parcial (não o total da compra)
-- O campo installment_info deve conter a informação de parcela (ex: "2/12")
+- O campo installment_info deve conter a informação de parcela já limpa, sem espaços internos
+  (ex: "9/10", nunca "9/1 0")
 - NÃO some parcelas — extraia cada linha da fatura como está
+- Nem todo lançamento é parcelado — se não houver nenhuma indicação de parcela na linha,
+  installment_info deve ser null (não invente uma parcela)
 - Se uma compra parcelada JÁ foi lançada em mês anterior (veja lista abaixo), identifique que é a continuação da mesma série — use exatamente a mesma descrição e informe o número correto da parcela
 ${existingBlock}
 

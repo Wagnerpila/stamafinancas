@@ -40,8 +40,11 @@ function normalizeInvoiceDate(dateStr, referenceMonth) {
 function parseInstallment(info) {
   if (!info) return null;
   const s = String(info);
-  // Extrai dois números separados por / ou "de"
-  const match = s.match(/(\d+)\s*[\/]\s*(\d+)/) || s.match(/(\d+)\s+de\s+(\d+)/i);
+  // Faturas com layout ruim às vezes quebram um número no meio (ex: "09/1 0" em vez de "09/10")
+  // — junta dígito+espaço+dígito antes de tentar casar, sem afetar o padrão "3 de 10" (que tem
+  // letras entre os números, não fica colado por essa regra).
+  const compact = s.replace(/(\d)\s+(\d)/g, "$1$2");
+  const match = compact.match(/(\d+)\s*[\/]\s*(\d+)/) || s.match(/(\d+)\s+de\s+(\d+)/i);
   if (!match) return null;
   const current = parseInt(match[1]);
   const total = parseInt(match[2]);

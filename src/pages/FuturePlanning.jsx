@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { addMonths, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
 
 const MONTHS_AHEAD = 6;
 const MONTHS_MAX = 36; // máximo de meses a considerar para "todos"
@@ -39,27 +40,28 @@ export default function FuturePlanning() {
   const [incomeByMonth, setIncomeByMonth] = useState({});
   const [showAllMonths, setShowAllMonths] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const u = await base44.auth.me();
-        setUser(u);
-        const [bls, txs, receivableBills] = await Promise.all([
-          base44.entities.Bill.filter({ created_by: u.email }),
-          base44.entities.Transaction.filter({ created_by: u.email, type: "income" }),
-          base44.entities.Bill.filter({ created_by: u.email, type: "receivable" }),
-        ]);
-        setBills(bls);
-        // Agrupa receitas por mês: transações de receita + contas a receber (pagas ou pendentes)
-        const now = new Date();
-        const incomeByMonth = {};
+  const load = async () => {
+    try {
+      const u = await base44.auth.me();
+      setUser(u);
+      const [bls, txs, receivableBills] = await Promise.all([
+        base44.entities.Bill.filter({ created_by: u.email }),
+        base44.entities.Transaction.filter({ created_by: u.email, type: "income" }),
+        base44.entities.Bill.filter({ created_by: u.email, type: "receivable" }),
+      ]);
+      setBills(bls);
+      // Agrupa receitas por mês: transações de receita + contas a receber (pagas ou pendentes)
+      const now = new Date();
+      const incomeByMonth = {};
 
-        // 1. Transações de receita lançadas
-        txs.forEach(t => {
-          const d = t.date ? new Date(t.date + "T00:00:00") : new Date(t.created_date);
-          const key = format(d, "yyyy-MM");
-          incomeByMonth[key] = (incomeByMonth[key] || 0) + (t.amount || 0);
-        });
+      // 1. Transações de receita lançadas
+      txs.forEach(t => {
+        // t.date vem da API como ISO completo ("...T12:00:00.000Z"), não "YYYY-MM-DD" puro —
+        // concatenar "T00:00:00" nele direto formava uma data inválida.
+        const d = t.date ? new Date(String(t.date).slice(0, 10) + "T00:00:00") : new Date(t.created_date);
+        const key = format(d, "yyyy-MM");
+        incomeByMonth[key] = (incomeByMonth[key] || 0) + (t.amount || 0);
+      });
 
         // 2. Contas a receber mensais recorrentes e pendentes (salário, etc.)
         // Só adiciona se não há transação de receita já lançada nesse mês (evita dupla contagem)
@@ -88,16 +90,22 @@ export default function FuturePlanning() {
         // Receita do mês atual como referência para meses futuros sem dados
         const currentKey = format(now, "yyyy-MM");
         const currentMonthIncome = incomeByMonth[currentKey] || 0;
-        setMonthlyIncome(currentMonthIncome);
-        setIncomeByMonth(incomeByMonth);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setMonthlyIncome(currentMonthIncome);
+      setIncomeByMonth(incomeByMonth);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     load();
   }, []);
+
+  // Reconsulta ao voltar de outra tela via bfcache/segundo plano (comum no mobile) — senão a
+  // tela fica presa em dados de antes de, por exemplo, importar uma fatura com novas parcelas.
+  useRefreshOnForeground(load);
 
   // Build months array: 6 próximos ou todos com lançamentos
   const months = useMemo(() => {
