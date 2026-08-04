@@ -5,7 +5,6 @@ import { ChevronRight, ChevronDown, Tag, Receipt, CreditCard, X } from "lucide-r
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
-import { motion, AnimatePresence } from "framer-motion";
 
 function formatBRL(v) {
   return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -223,50 +222,44 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
           })}
         </div>
 
-        <AnimatePresence initial={false}>
-          {expandedCategory && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-3 p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    Lançamentos em "{expandedCategory}"
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setExpandedCategory(null)}
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    aria-label="Fechar"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+        {expandedCategory && (
+          // Renderização condicional simples (sem animar height:"auto" do framer-motion) — essa
+          // técnica mede scrollHeight via JS e, em pelo menos um caso real testado (Samsung
+          // Internet no Android), o estado mudava (o card ficava destacado) mas o painel nunca
+          // chegava a aparecer. Um fade simples via classe utilitária evita essa medição.
+          <div className="mt-3 p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Lançamentos em "{expandedCategory}"
+              </p>
+              <button
+                type="button"
+                onClick={() => setExpandedCategory(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                aria-label="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {(itemsByCategory[expandedCategory] || []).map(item => (
+                <div key={item.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {item.source === "creditcard"
+                      ? <CreditCard className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      : <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    }
+                    <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">R$ {formatBRL(item.amount)}</span>
+                  </div>
                 </div>
-                <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                  {(itemsByCategory[expandedCategory] || []).map(item => (
-                    <div key={item.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {item.source === "creditcard"
-                          ? <CreditCard className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          : <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        }
-                        <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
-                        <span className="text-sm font-medium text-red-600 dark:text-red-400">R$ {formatBRL(item.amount)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

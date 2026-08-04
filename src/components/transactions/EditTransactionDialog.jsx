@@ -50,10 +50,35 @@ export default function EditTransactionDialog({ transaction, open, onClose, onSa
     e.preventDefault();
     setSaving(true);
     try {
+      const amount = Math.abs(parseFloat(formData.amount));
       await Transaction.update(transaction.id, {
         ...formData,
-        amount: Math.abs(parseFloat(formData.amount)),
+        amount,
       });
+
+      // Se esta transação está vinculada a uma conta a pagar/receber (ex: é o pagamento de uma
+      // conta, ou foi criada junto com uma conta recorrente via "Repetir Transação"), propaga
+      // título/valor/categoria pra conta também. A conta vinculada é sempre a ORIGINAL (mesmo
+      // pra contas recorrentes — handleMarkAsPaid e o "Repetir Transação" sempre linkam nela, não
+      // nas cópias pagas de cada mês), então atualizá-la já reflete em todas as próximas
+      // ocorrências projetadas — sem isso, editar por aqui só mudava a transação, e a conta (e os
+      // outros meses futuros dela) continuava com os dados antigos até editar direto em
+      // "Contas a Pagar/Receber".
+      if (transaction.linked_bill_id) {
+        try {
+          const bill = await base44.entities.Bill.get(transaction.linked_bill_id);
+          if (bill) {
+            await base44.entities.Bill.update(bill.id, {
+              title: formData.description,
+              amount,
+              category: formData.category,
+            });
+          }
+        } catch (err) {
+          console.error("Erro ao atualizar conta vinculada:", err);
+        }
+      }
+
       onSaved();
       onClose();
     } finally {

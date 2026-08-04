@@ -18,17 +18,19 @@ export default function ManualTransaction() {
   const handleSubmit = async (formData) => {
     setIsSubmitting(true);
     try {
-      if (initialData?.id) {
-        await Transaction.update(initialData.id, formData);
-      } else {
-        await Transaction.create(formData);
-      }
+      // Retorna a transação salva (com o id) — TransactionForm precisa dele pra linkar a
+      // transação de hoje à conta recorrente gerada pela opção "Repetir Transação".
+      const saved = initialData?.id
+        ? await Transaction.update(initialData.id, formData)
+        : await Transaction.create(formData);
       setSuccess(true);
       setTimeout(() => {
         navigate(createPageUrl("Dashboard"));
       }, 1500);
+      return saved;
     } catch (error) {
       console.error("Erro ao salvar transação:", error);
+      throw error;
     } finally {
       setIsSubmitting(false);
     }

@@ -179,7 +179,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
     };
 
     try {
-      await onSubmit(processedData);
+      const savedTransaction = await onSubmit(processedData);
 
       // Repetir esta transação nos próximos meses/trimestres/anos: em vez de já criar cada mês
       // futuro como uma Transaction real (o que descontava do saldo e inflava "Gastos por
@@ -190,7 +190,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
       if (isRepeating) {
         const intervalMonths = REPEAT_INTERVAL_MONTHS[repeatFrequency] || 1;
         const nextDueDate = addMonthsToDateString(formData.date, intervalMonths);
-        await base44.entities.Bill.create({
+        const bill = await base44.entities.Bill.create({
           title: formData.description,
           description: formData.notes || '',
           amount: processedData.amount,
@@ -199,6 +199,11 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
           due_date: toLocalISOString(nextDueDate),
           recurrence: repeatFrequency,
         });
+        // Linka a transação de hoje à conta recém-criada — sem isso, editar essa transação
+        // depois não tem como saber que existe uma conta recorrente pra atualizar junto.
+        if (savedTransaction?.id) {
+          await Transaction.update(savedTransaction.id, { linked_bill_id: bill.id });
+        }
       }
 
       // If user wants to also create a bill to pay
