@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ChevronRight, ChevronDown, Tag, Receipt, CreditCard } from "lucide-react";
+import { ChevronRight, ChevronDown, Tag, Receipt, CreditCard, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
@@ -49,9 +49,11 @@ const ENUM_LABELS = {
   other_expense: { name: "Outras Despesas", icon: "📦", color: "#64748b" },
 };
 
-export default function CategorySpendingCompact({ transactions = [], creditCardTxs = [], budgets = [], selectedDate }) {
+export default function CategorySpendingCompact({ transactions = [], creditCardTxs = [], budgets = [], selectedDate, onCategoryChanged }) {
   const [dbCategories, setDbCategories] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [savingItemId, setSavingItemId] = useState(null);
 
   // Fecha a lista expandida ao trocar de mês — senão fica mostrando lançamentos de um mês que
   // não é mais o selecionado.
@@ -101,7 +103,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       if (!d || isNaN(d)) return;
       if (d.getMonth() !== ref.getMonth() || d.getFullYear() !== ref.getFullYear()) return;
       const key = resolveCategoryName(t.category, dbCategories);
-      addItem(key, { id: `t-${t.id}`, description: t.description, amount: t.amount, date: t.date, source: "transaction" });
+      addItem(key, { id: `t-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.date, category: key, source: "transaction" });
     });
 
     // Transações de cartão: sempre contabilizar pela data da compra
@@ -111,7 +113,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       if (!d || isNaN(d)) return;
       if (d.getMonth() !== ref.getMonth() || d.getFullYear() !== ref.getFullYear()) return;
       const key = resolveCategoryName(t.category, dbCategories);
-      addItem(key, { id: `cc-${t.id}`, description: t.description, amount: t.amount, date: t.purchase_date, source: "creditcard" });
+      addItem(key, { id: `cc-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.purchase_date, category: key, source: "creditcard" });
     });
 
     Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
@@ -149,6 +151,26 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       .filter(cat => (spending[cat.name] || 0) > 0 || budgets.some(b => b.category === cat.name))
       .sort((a, b) => (spending[b.name] || 0) - (spending[a.name] || 0));
   }, [dbCategories, spending, budgets]);
+
+  // Muda só a categoria do lançamento selecionado na lista, sem abrir o formulário inteiro de
+  // edição — chama a entidade certa conforme a origem (Transaction ou CreditCardTransaction).
+  const handleChangeCategory = async (item, newCategory) => {
+    if (!newCategory || newCategory === item.category) { setEditingItemId(null); return; }
+    setSavingItemId(item.id);
+    try {
+      if (item.source === "creditcard") {
+        await base44.entities.CreditCardTransaction.update(item.rawId, { category: newCategory });
+      } else {
+        await base44.entities.Transaction.update(item.rawId, { category: newCategory });
+      }
+      onCategoryChanged?.();
+    } catch (err) {
+      console.error("Erro ao atualizar categoria:", err);
+    } finally {
+      setSavingItemId(null);
+      setEditingItemId(null);
+    }
+  };
 
   if (visible.length === 0) return null;
 
@@ -223,21 +245,57 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
                 {isExpanded && (
                   <div className="border-t border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-3 animate-in fade-in duration-200">
                     <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                      {items.map(item => (
-                        <div key={item.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {item.source === "creditcard"
-                              ? <CreditCard className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                              : <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            }
-                            <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
+                      {items.map(item => {
+                        const isEditing = editingItemId === item.id;
+                        return (
+                          <div key={item.id} className="rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <div className="flex items-center justify-between gap-3 py-1.5 px-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {item.source === "creditcard"
+                                  ? <CreditCard className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  : <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                }
+                                <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
+                                <span className="text-sm font-medium text-red-600 dark:text-red-400">R$ {formatBRL(item.amount)}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingItemId(prev => (prev === item.id ? null : item.id))}
+                                  className="text-slate-300 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400"
+                                  aria-label="Alterar categoria"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            {isEditing && (
+                              <div className="px-2 pb-2 flex items-center gap-2">
+                                <select
+                                  autoFocus
+                                  defaultValue=""
+                                  disabled={savingItemId === item.id}
+                                  onChange={e => handleChangeCategory(item, e.target.value)}
+                                  className="flex-1 text-xs rounded-md border border-slate-300 dark:border-slate-600 px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                >
+                                  <option value="" disabled>Mover para categoria...</option>
+                                  {dbCategories.map(c => (
+                                    <option key={c.id} value={c.name}>{c.icon ? `${c.icon} ` : ""}{c.name}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingItemId(null)}
+                                  className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
-                            <span className="text-sm font-medium text-red-600 dark:text-red-400">R$ {formatBRL(item.amount)}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}

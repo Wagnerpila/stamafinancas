@@ -363,7 +363,11 @@ export default function CreditCardInvoices() {
                                 <div>
                                   <p className="text-sm font-medium text-slate-900 dark:text-white">{tx.description}</p>
                                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                                   {getCategoryLabel(tx.category)} · {tx.purchase_date ? new Date(tx.purchase_date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}
+                                   {/* purchase_date vem da API como ISO completo ("...T00:00:00.000Z"), não como
+                                       "YYYY-MM-DD" puro — concatenar "T00:00:00" nele de novo formava uma string
+                                       inválida e mostrava "Invalid Date". Usa só a parte da data (10 primeiros
+                                       caracteres) antes de reconstruir a data local. */}
+                                   {getCategoryLabel(tx.category)} · {tx.purchase_date ? new Date(tx.purchase_date.slice(0, 10) + "T00:00:00").toLocaleDateString("pt-BR") : "—"}
                                    {tx.installments > 1 && ` · Parcela ${tx.installment_number}/${tx.installments}`}
                                   </p>
                                 </div>

@@ -49,7 +49,10 @@ export default function CategoryBudgets() {
     setExpenseCategories(unique);
     setBudgets(b);
     const monthlyT = t.filter(tx => {
-      const d = new Date(tx.date + "T00:00:00");
+      // tx.date vem da API como ISO completo ("...T12:00:00.000Z"), não "YYYY-MM-DD" puro —
+      // concatenar "T00:00:00" nele direto formava uma data inválida (NaN em getMonth/getFullYear),
+      // fazendo esse filtro nunca bater com nada.
+      const d = new Date(String(tx.date).slice(0, 10) + "T00:00:00");
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
     setTransactions(monthlyT);

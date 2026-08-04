@@ -246,6 +246,7 @@ export default function Dashboard() {
             creditCardTxs={creditCardTxs}
             budgets={budgets}
             selectedDate={selectedDate}
+            onCategoryChanged={loadInitialData}
           />
         </motion.div>
 

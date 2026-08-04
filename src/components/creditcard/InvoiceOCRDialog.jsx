@@ -49,6 +49,29 @@ function parseInstallment(info) {
   return { current, total };
 }
 
+function normalizeDesc(s) {
+  return String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+// Verifica se um lançamento extraído pela IA já foi importado antes (ex: a fatura deste mês
+// mostra, pra contexto, uma parcela que já foi lançada na fatura anterior). Compras parceladas
+// são identificadas pela mesma descrição + mesmo número de parcela/total; compras avulsas, por
+// descrição + valor + data — evita duplicar o lançamento ao importar faturas em sequência.
+function findExistingMatch(item, parsed, existingTxs, referenceMonth) {
+  const desc = normalizeDesc(item.description);
+  return existingTxs.find(tx => {
+    if (normalizeDesc(tx.description) !== desc) return false;
+    if (parsed) {
+      return tx.installments === parsed.total && tx.installment_number === parsed.current;
+    }
+    if (tx.installments > 1) return false; // compra avulsa não deve casar com uma parcelada
+    const sameAmount = Math.abs((tx.amount || 0) - (item.amount || 0)) < 0.01;
+    const itemDate = normalizeInvoiceDate(item.date, referenceMonth);
+    const sameDate = itemDate && tx.purchase_date && tx.purchase_date.slice(0, 10) === itemDate;
+    return sameAmount && sameDate;
+  });
+}
+
 export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -57,6 +80,11 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
   const [items, setItems] = useState([]);
   const [importing, setImporting] = useState(false);
   const [customCategories, setCustomCategories] = useState([]);
+  // Snapshot das transações/contas já existentes deste cartão no momento da análise — usado tanto
+  // pra marcar itens duplicados na lista quanto, na importação, pra não recriar um compromisso
+  // futuro (Bill) que uma fatura anterior já tinha gerado pra essa mesma parcela.
+  const [existingTxs, setExistingTxs] = useState([]);
+  const [existingCardBills, setExistingCardBills] = useState([]);
   const fileRef = useRef();
 
   useEffect(() => {
@@ -102,9 +130,16 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file: f });
 
-      // Busca parcelas já lançadas neste cartão para ajudar o OCR a identificar continuações
-      const existingTxs = await base44.entities.CreditCardTransaction.filter({ card_id: card.id });
-      const existing_installments = (existingTxs || [])
+      // Busca parcelas já lançadas neste cartão para ajudar o OCR a identificar continuações, e
+      // também pra marcar na lista os itens que já foram importados antes (evita duplicar ao
+      // importar faturas em sequência, mês a mês)
+      const [existing, existingBills] = await Promise.all([
+        base44.entities.CreditCardTransaction.filter({ card_id: card.id }),
+        base44.entities.Bill.filter({ card_id: card.id, category: "credit_card" }),
+      ]);
+      setExistingTxs(existing || []);
+      setExistingCardBills(existingBills || []);
+      const existing_installments = (existing || [])
         .filter(t => t.installments > 1)
         .map(t => ({ description: t.description, installment_number: t.installment_number, installments: t.installments }));
 
@@ -124,9 +159,12 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
           const suggestedCat = t.category
             ? (customCategories.find(c => c.name.toLowerCase() === t.category.toLowerCase())?.name || "")
             : "";
+          const parsed = parseInstallment(t.installment_info);
+          const isDuplicate = !!findExistingMatch(t, parsed, existing || [], data.reference_month);
           return {
             ...t,
-            selected: true,
+            selected: !isDuplicate, // parcela/compra já lançada antes: começa desmarcada
+            isDuplicate,
             notes: t.installment_info ? `Parcela: ${t.installment_info}` : "",
             category: suggestedCat || defaultCat // fallback para "Compras" se OCR não identificou
           };
@@ -195,22 +233,36 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
         await base44.entities.CreditCardTransaction.update(tx.id, { invoice_id: invoice.id });
       }
 
-      // 3. Criar compromissos futuros para parcelas restantes
+      // 3. Criar compromissos futuros para parcelas restantes — pulando parcelas que uma fatura
+      // importada anteriormente já tenha gerado como Bill, ou que já existam como transação real
+      // (ex: a própria fatura deste mês já trazia aquela parcela futura como um lançamento à
+      // parte). Sem isso, importar faturas em sequência mês a mês duplicava o mesmo compromisso.
       const billsToCreate = [];
       for (const { it, parsed } of created) {
         if (!parsed) continue;
         const { current, total } = parsed;
         const remaining = total - current; // parcelas que ainda vão vencer
         if (remaining <= 0) continue;
+        const desc = normalizeDesc(it.description);
 
         for (let offset = 1; offset <= remaining; offset++) {
+          const installmentNumber = current + offset;
+
+          const alreadyRecorded = created.some(({ it: other, parsed: otherParsed }) =>
+            otherParsed && normalizeDesc(other.description) === desc && otherParsed.current === installmentNumber && otherParsed.total === total
+          );
+          const alreadyBilled = existingCardBills.some(b =>
+            normalizeDesc(b.title).startsWith(desc) && b.title.endsWith(`Parcela ${installmentNumber}/${total}`)
+          );
+          if (alreadyRecorded || alreadyBilled) continue;
+
           const futureDate = new Date();
           futureDate.setMonth(futureDate.getMonth() + offset);
           futureDate.setDate(card.due_day || 10);
           const dueDateStr = futureDate.toISOString().split("T")[0];
           billsToCreate.push({
-            title: `${it.description} — Parcela ${current + offset}/${total}`,
-            description: `Parcela ${current + offset} de ${total} · Cartão ${card.name}`,
+            title: `${it.description} — Parcela ${installmentNumber}/${total}`,
+            description: `Parcela ${installmentNumber} de ${total} · Cartão ${card.name}`,
             amount: it.amount,
             type: "payable",
             category: "credit_card",
@@ -324,6 +376,11 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
                           <span className="text-sm font-bold text-red-500 flex-shrink-0 whitespace-nowrap">R$ {formatBRL(it.amount)}</span>
                         </div>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {it.isDuplicate && (
+                            <Badge className="text-xs bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-300">
+                              Já lançada antes
+                            </Badge>
+                          )}
                           {it.installment_info && (
                             <Badge variant="outline" className="text-xs">{it.installment_info}</Badge>
                           )}
