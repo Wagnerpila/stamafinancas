@@ -8,11 +8,12 @@ import { motion } from "framer-motion";
 import BillForm from "../components/bills/BillForm.jsx";
 import BillsList from "../components/bills/BillsList";
 import MonthFilter from "../components/common/MonthFilter";
-import { getBillsForMonth, getPaidRecurringIdsForMonth } from "../components/lib/billRecurrence";
+import { getBillsForMonth, getPaidRecurringIdsForMonth, findMatchingTransaction } from "../components/lib/billRecurrence";
 import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
 
 export default function BillsToPay() {
   const [bills, setBills] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingBill, setEditingBill] = useState(null);
@@ -28,7 +29,7 @@ export default function BillsToPay() {
       try {
         const currentUser = await base44.auth.me();
         setUser(currentUser);
-        await loadBills(currentUser.email);
+        await Promise.all([loadBills(currentUser.email), loadTransactions(currentUser.email)]);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
       } finally {
@@ -40,7 +41,12 @@ export default function BillsToPay() {
 
   // Reconsulta ao voltar de outra tela via bfcache/segundo plano (comum no mobile) — senão a
   // lista fica presa em "vencida" mesmo depois de a conta ter sido paga em outra navegação.
-  useRefreshOnForeground(() => { if (user?.email) loadBills(user.email); });
+  useRefreshOnForeground(() => {
+    if (user?.email) {
+      loadBills(user.email);
+      loadTransactions(user.email);
+    }
+  });
 
   const loadBills = async (userEmail) => {
     if (!userEmail) return;
@@ -52,6 +58,18 @@ export default function BillsToPay() {
       console.error("Erro ao carregar contas:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Usada só para checar, ao marcar uma conta como paga, se o usuário já não tinha lançado essa
+  // despesa manualmente antes (ver handleMarkAsPaid) — evita duplicar o lançamento.
+  const loadTransactions = async (userEmail) => {
+    if (!userEmail) return;
+    try {
+      const data = await base44.entities.Transaction.filter({ type: "expense", created_by: userEmail });
+      setTransactions(data);
+    } catch (error) {
+      console.error("Erro ao carregar transações:", error);
     }
   };
 
@@ -128,15 +146,47 @@ export default function BillsToPay() {
       // para que apareça corretamente no widget de gastos por categoria
       const category = srcBill.category || "bills";
 
-      await base44.entities.Transaction.create({
-        description: `Pagamento: ${srcBill.title}`,
+      // Se o usuário já tinha lançado essa despesa manualmente (mesmo título e valor, perto do
+      // vencimento) antes de vir marcar a conta como paga, criar uma transação nova duplicaria
+      // o gasto — o dinheiro já foi registrado, só a conta é que não sabia disso. Oferece
+      // vincular à transação existente em vez de lançar de novo.
+      const existingTx = findMatchingTransaction(transactions, {
+        title: srcBill.title,
         amount: srcBill.amount,
         type: "expense",
-        category: category,
-        date: today,
-        notes: `Conta com vencimento em ${bill.due_date}`,
-        linked_bill_id: originalId,
+        referenceDate: bill.due_date || srcBill.due_date,
       });
+
+      if (existingTx) {
+        const existingDate = existingTx.date ? existingTx.date.slice(0, 10).split("-").reverse().join("/") : "";
+        const useExisting = window.confirm(
+          `Já existe um lançamento parecido: "${existingTx.description}" de R$ ${existingTx.amount.toFixed(2)} em ${existingDate}.\n\n` +
+          `Vincular esse lançamento à conta em vez de criar um novo (evita duplicar a despesa)?`
+        );
+        if (useExisting) {
+          await base44.entities.Transaction.update(existingTx.id, { linked_bill_id: originalId });
+        } else {
+          await base44.entities.Transaction.create({
+            description: `Pagamento: ${srcBill.title}`,
+            amount: srcBill.amount,
+            type: "expense",
+            category: category,
+            date: today,
+            notes: `Conta com vencimento em ${bill.due_date}`,
+            linked_bill_id: originalId,
+          });
+        }
+      } else {
+        await base44.entities.Transaction.create({
+          description: `Pagamento: ${srcBill.title}`,
+          amount: srcBill.amount,
+          type: "expense",
+          category: category,
+          date: today,
+          notes: `Conta com vencimento em ${bill.due_date}`,
+          linked_bill_id: originalId,
+        });
+      }
 
       if (hasRecurrence) {
         // Conta recorrente: cria cópia paga apenas para o mês específico, NÃO altera a original
@@ -159,7 +209,7 @@ export default function BillsToPay() {
         await base44.entities.Bill.update(originalId, { status: "paid", paid_date: today });
       }
 
-      await loadBills(user.email);
+      await Promise.all([loadBills(user.email), loadTransactions(user.email)]);
     } catch (error) {
       console.error("Erro ao marcar como paga:", error);
       alert(`Erro ao marcar conta como paga: ${error.message}`);

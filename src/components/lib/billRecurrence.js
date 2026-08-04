@@ -106,3 +106,37 @@ export function getEffectiveDueDateToday(bill, bills) {
 
   return buildVirtualBill(bill, today).due_date;
 }
+
+export function normalizeTitle(str) {
+  return String(str || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+}
+
+// Procura, entre as transações já existentes do usuário, uma que corresponda a esse mesmo
+// pagamento — mesmo título (normalizado), mesmo valor, mesmo tipo, dentro de uma janela de dias
+// em torno do vencimento — e que ainda não esteja vinculada a nenhuma conta.
+//
+// Usado por "Marcar como Paga/Recebida": se o usuário já tinha lançado a transação manualmente
+// (ex: antes de configurar a conta como recorrente, ou por hábito) antes de vir marcar a conta
+// como paga no app, criar uma transação nova duplicaria a despesa/receita — o valor real já
+// tinha sido lançado, só a conta é que não sabia disso.
+export function findMatchingTransaction(transactions, { title, amount, type, referenceDate, windowDays = 10 }) {
+  const normalizedTitle = normalizeTitle(title);
+  if (!normalizedTitle) return null;
+
+  const ref = referenceDate instanceof Date
+    ? referenceDate
+    : new Date(String(referenceDate || "").slice(0, 10) + "T00:00:00");
+  if (isNaN(ref)) return null;
+
+  return transactions.find(t => {
+    if (t.linked_bill_id) return false; // já vinculada a outra conta
+    if (t.type !== type) return false;
+    if (Math.abs((t.amount || 0) - amount) >= 0.01) return false;
+    if (normalizeTitle(t.description) !== normalizedTitle) return false;
+    if (!t.date) return false;
+    const td = new Date(t.date.slice(0, 10) + "T00:00:00");
+    if (isNaN(td)) return false;
+    const diffDays = Math.abs((td - ref) / (1000 * 60 * 60 * 24));
+    return diffDays <= windowDays;
+  }) || null;
+}
