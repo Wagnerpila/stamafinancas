@@ -29,7 +29,10 @@ async function call({ system, prompt, files, tool }) {
 
   const body = {
     model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5',
-    max_tokens: 4096,
+    // Extratos bancários e faturas longas podem ter dezenas de lançamentos; em JSON estruturado
+    // isso passa fácil de 4096 tokens e a resposta vinha cortada no meio, resultando em uma lista
+    // de transações vazia/incompleta sem nenhum erro visível (ver checagem de stop_reason abaixo).
+    max_tokens: 8192,
     system,
     messages: [{ role: 'user', content: buildContent({ prompt, files }) }],
   };
@@ -69,6 +72,11 @@ export const anthropicProvider = {
       input_schema: schema,
     };
     const data = await call({ system, prompt, files, tool });
+    if (data.stop_reason === 'max_tokens') {
+      throw new Error(
+        'O arquivo tem muitos lançamentos e a resposta da IA foi cortada antes de terminar. Tente enviar um período menor ou dividir o arquivo em partes.'
+      );
+    }
     const block = data.content?.find((b) => b.type === 'tool_use');
     if (!block) throw new Error('A IA não retornou dados estruturados.');
     return block.input;
