@@ -1,18 +1,34 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Transaction } from "@/entities/Transaction";
 import { User } from "@/entities/User";
+import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, TrendingUp, TrendingDown, Calendar } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Calendar, CreditCard, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion } from "framer-motion";
 import TransactionChart from "../components/dashboard/TransactionChart";
 import MonthFilter from "../components/common/MonthFilter";
+import SpendingBreakdownWidget from "../components/reports/SpendingBreakdownWidget";
+
+// Mesma paleta (em hex) usada nos gradientes da tela de Cartões — mantém a cor de cada cartão
+// consistente entre as duas telas.
+const CARD_COLORS = ["#7e22ce", "#334155", "#059669", "#e11d48", "#b45309", "#4338ca", "#0d9488", "#db2777"];
+
+const PAYMENT_METHOD_INFO = {
+  cash: { name: "Dinheiro", icon: "💵", color: "#16a34a" },
+  pix: { name: "Pix", icon: "⚡", color: "#0ea5e9" },
+  debit: { name: "Débito", icon: "💳", color: "#8b5cf6" },
+  credit_card: { name: "Cartão de Crédito", icon: "💳", color: "#f97316" },
+  food_voucher: { name: "Vale Alimentação", icon: "🍽️", color: "#f59e0b" },
+};
 
 export default function Reports() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
+  const [creditCardTxs, setCreditCardTxs] = useState([]);
+  const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -20,8 +36,14 @@ export default function Reports() {
     const loadInitialData = async () => {
       try {
         const currentUser = await User.me();
-        const data = await Transaction.filter({ created_by: currentUser.email }, "-date");
+        const [data, ccData, cardData] = await Promise.all([
+          Transaction.filter({ created_by: currentUser.email }, "-date"),
+          base44.entities.CreditCardTransaction.filter({ created_by: currentUser.email }),
+          base44.entities.CreditCard.filter({ created_by: currentUser.email }),
+        ]);
         setTransactions(data);
+        setCreditCardTxs(ccData);
+        setCards(cardData);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
       } finally {
@@ -38,6 +60,63 @@ export default function Reports() {
              d.getFullYear() === selectedDate.getFullYear();
     });
   }, [transactions, selectedDate]);
+
+  const filteredCreditCardTxs = useMemo(() => {
+    return creditCardTxs.filter(t => {
+      const raw = t.purchase_date || t.created_date;
+      const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
+      if (!d || isNaN(d)) return false;
+      return d.getMonth() === selectedDate.getMonth() && d.getFullYear() === selectedDate.getFullYear();
+    });
+  }, [creditCardTxs, selectedDate]);
+
+  // Agrupa as compras do mês por cartão — mesmo padrão de {groups, itemsByGroup} que o widget
+  // "Gastos por Categoria" do Dashboard usa, só que agrupando por cartão em vez de categoria.
+  const cardBreakdown = useMemo(() => {
+    const totals = {};
+    const items = {};
+    filteredCreditCardTxs.forEach(t => {
+      const key = t.card_id || "sem_cartao";
+      totals[key] = (totals[key] || 0) + Math.abs(t.amount || 0);
+      if (!items[key]) items[key] = [];
+      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.purchase_date });
+    });
+    Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
+
+    const groups = Object.keys(totals).map((key, index) => {
+      const card = cards.find(c => c.id === key);
+      return {
+        key,
+        name: card?.name || "Cartão removido",
+        icon: "💳",
+        color: CARD_COLORS[(card?.color_index ?? index) % CARD_COLORS.length],
+        amount: totals[key],
+      };
+    }).sort((a, b) => b.amount - a.amount);
+
+    return { groups, itemsByGroup: items };
+  }, [filteredCreditCardTxs, cards]);
+
+  // Agrupa as despesas do mês por forma de pagamento (campo já salvo em cada Transaction).
+  const paymentMethodBreakdown = useMemo(() => {
+    const totals = {};
+    const items = {};
+    filteredTransactions.forEach(t => {
+      if (t.type !== "expense") return;
+      const key = t.payment_method || "cash";
+      totals[key] = (totals[key] || 0) + Math.abs(t.amount || 0);
+      if (!items[key]) items[key] = [];
+      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.date });
+    });
+    Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
+
+    const groups = Object.keys(totals).map(key => {
+      const info = PAYMENT_METHOD_INFO[key] || { name: key, icon: "💰", color: "#64748b" };
+      return { key, name: info.name, icon: info.icon, color: info.color, amount: totals[key] };
+    }).sort((a, b) => b.amount - a.amount);
+
+    return { groups, itemsByGroup: items };
+  }, [filteredTransactions]);
 
   const monthlyStats = useMemo(() => {
     const stats = {};
@@ -117,6 +196,28 @@ export default function Reports() {
             </CardContent>
           </Card>
         </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15 }}
+        className="grid lg:grid-cols-2 gap-6 mb-8"
+      >
+        <SpendingBreakdownWidget
+          title="Gastos por Cartão"
+          icon={<CreditCard className="w-4 h-4 text-blue-500" />}
+          groups={cardBreakdown.groups}
+          itemsByGroup={cardBreakdown.itemsByGroup}
+          emptyMessage="Nenhuma compra em cartão neste período."
+        />
+        <SpendingBreakdownWidget
+          title="Gastos por Forma de Pagamento"
+          icon={<Wallet className="w-4 h-4 text-blue-500" />}
+          groups={paymentMethodBreakdown.groups}
+          itemsByGroup={paymentMethodBreakdown.itemsByGroup}
+          emptyMessage="Nenhuma despesa neste período."
+        />
       </motion.div>
 
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
