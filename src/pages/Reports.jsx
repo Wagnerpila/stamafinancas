@@ -10,7 +10,7 @@ import { createPageUrl } from "@/utils";
 import { motion } from "framer-motion";
 import TransactionChart from "../components/dashboard/TransactionChart";
 import MonthFilter from "../components/common/MonthFilter";
-import SpendingBreakdownWidget from "../components/reports/SpendingBreakdownWidget";
+import SpendingBreakdownWidget from "../components/common/SpendingBreakdownWidget";
 
 // Mesma paleta (em hex) usada nos gradientes da tela de Cartões — mantém a cor de cada cartão
 // consistente entre as duas telas.
@@ -31,6 +31,7 @@ export default function Reports() {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [yearMode, setYearMode] = useState(false);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -56,16 +57,18 @@ export default function Reports() {
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const d = new Date(t.date || t.created_date);
+      if (yearMode) return d.getFullYear() === selectedDate.getFullYear();
       return d.getMonth() === selectedDate.getMonth() &&
              d.getFullYear() === selectedDate.getFullYear();
     });
-  }, [transactions, selectedDate]);
+  }, [transactions, selectedDate, yearMode]);
 
   const filteredCreditCardTxs = useMemo(() => {
     return creditCardTxs.filter(t => {
       const raw = t.purchase_date || t.created_date;
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
       if (!d || isNaN(d)) return false;
+      if (yearMode) return d.getFullYear() === selectedDate.getFullYear();
       return d.getMonth() === selectedDate.getMonth() && d.getFullYear() === selectedDate.getFullYear();
     });
   }, [creditCardTxs, selectedDate]);
@@ -163,7 +166,12 @@ export default function Reports() {
             </div>
           </div>
           <div className="sm:ml-auto">
-            <MonthFilter selectedDate={selectedDate} onChange={setSelectedDate} />
+            <MonthFilter
+              selectedDate={selectedDate}
+              onChange={setSelectedDate}
+              yearMode={yearMode}
+              onToggleYearMode={() => setYearMode(v => !v)}
+            />
           </div>
         </div>
 

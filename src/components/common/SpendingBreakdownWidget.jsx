@@ -14,12 +14,14 @@ function formatDateBR(dateStr) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-// Widget compacto de "gastos por X" (mesmo visual do "Gastos por Categoria" do Dashboard):
+// Widget compacto de "valores por X" (mesmo visual do "Gastos por Categoria" do Dashboard):
 // cards clicáveis com ícone/valor/barra de proporção, que expandem pra mostrar os lançamentos
-// que compõem o total. Reutilizado tanto pra "Cartões" quanto "Tipo de Pagamento" nos Relatórios.
-export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGroup, emptyMessage }) {
+// que compõem o total. Reutilizado por Cartões e Tipo de Pagamento (Relatórios) e por Receitas
+// por Categoria (Dashboard) — `positive` só troca a cor do valor de cada lançamento (verde/vermelho).
+export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGroup, emptyMessage, positive = false }) {
   const [expandedKey, setExpandedKey] = useState(null);
   const total = groups.reduce((s, g) => s + g.amount, 0);
+  const amountColorClass = positive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400";
 
   return (
     <Card className="border-0 shadow-lg">
@@ -32,7 +34,7 @@ export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGr
       <CardContent className="pt-0">
         {groups.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">
-            {emptyMessage || "Nenhum gasto no período."}
+            {emptyMessage || "Nenhum valor no período."}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -83,7 +85,7 @@ export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGr
                             <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
-                              <span className="text-sm font-medium text-red-600 dark:text-red-400">R$ {formatBRL(item.amount)}</span>
+                              <span className={`text-sm font-medium ${amountColorClass}`}>R$ {formatBRL(item.amount)}</span>
                             </div>
                           </div>
                         ))}

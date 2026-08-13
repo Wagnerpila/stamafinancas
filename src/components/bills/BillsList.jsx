@@ -79,7 +79,7 @@ export default function BillsList({ bills, onEdit, onDelete, onMarkAsPaid, type 
       <div className="md:hidden">
         {bills.map((bill) => (
           <motion.div
-            key={bill.id}
+            key={bill._virtual ? `${bill.id}-${bill.due_date}` : bill.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -109,7 +109,7 @@ export default function BillsList({ bills, onEdit, onDelete, onMarkAsPaid, type 
                 const config = statusConfig[currentStatus];
 
                 return (
-                  <tr key={bill.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                  <tr key={bill._virtual ? `${bill.id}-${bill.due_date}` : bill.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
                     <td className="p-4 font-medium text-slate-800 dark:text-slate-200">{bill.title}</td>
                     <td className={`p-4 font-semibold ${type === 'payable' ? 'text-red-600' : 'text-emerald-600'}`}>
                       R$ {bill.amount.toFixed(2)}

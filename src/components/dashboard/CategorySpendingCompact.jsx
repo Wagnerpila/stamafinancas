@@ -49,7 +49,7 @@ const ENUM_LABELS = {
   other_expense: { name: "Outras Despesas", icon: "📦", color: "#64748b" },
 };
 
-export default function CategorySpendingCompact({ transactions = [], creditCardTxs = [], budgets = [], selectedDate, onCategoryChanged }) {
+export default function CategorySpendingCompact({ transactions = [], creditCardTxs = [], budgets = [], selectedDate, yearMode = false, onCategoryChanged }) {
   const [dbCategories, setDbCategories] = useState([]);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
@@ -81,10 +81,14 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
     return raw;
   };
 
-  // Agrupa gastos do mês por categoria — soma (`spending`) e a lista de lançamentos que compõem
-  // cada soma (`itemsByCategory`), pra poder abrir "o que compõe esse valor" ao clicar no card.
+  // Agrupa gastos do mês (ou do ano todo, se yearMode) por categoria — soma (`spending`) e a
+  // lista de lançamentos que compõem cada soma (`itemsByCategory`), pra poder abrir "o que
+  // compõe esse valor" ao clicar no card.
   const { spending, itemsByCategory } = useMemo(() => {
     const ref = selectedDate || new Date();
+    const matchesPeriod = (d) => yearMode
+      ? d.getFullYear() === ref.getFullYear()
+      : d.getMonth() === ref.getMonth() && d.getFullYear() === ref.getFullYear();
     const totals = {};
     const items = {};
     const addItem = (key, item) => {
@@ -100,8 +104,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       // Manter despesas normais que possam ter invoice_id por outros motivos
       const raw = t.date || t.created_date;
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
-      if (!d || isNaN(d)) return;
-      if (d.getMonth() !== ref.getMonth() || d.getFullYear() !== ref.getFullYear()) return;
+      if (!d || isNaN(d) || !matchesPeriod(d)) return;
       const key = resolveCategoryName(t.category, dbCategories);
       addItem(key, { id: `t-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.date, category: key, source: "transaction" });
     });
@@ -110,8 +113,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
     creditCardTxs.forEach(t => {
       const raw = t.purchase_date || t.created_date;
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
-      if (!d || isNaN(d)) return;
-      if (d.getMonth() !== ref.getMonth() || d.getFullYear() !== ref.getFullYear()) return;
+      if (!d || isNaN(d) || !matchesPeriod(d)) return;
       const key = resolveCategoryName(t.category, dbCategories);
       addItem(key, { id: `cc-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.purchase_date, category: key, source: "creditcard" });
     });
@@ -119,7 +121,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
     Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
 
     return { spending: totals, itemsByCategory: items };
-  }, [transactions, creditCardTxs, selectedDate, dbCategories]);
+  }, [transactions, creditCardTxs, selectedDate, yearMode, dbCategories]);
 
   const totalSpent = Object.values(spending).reduce((s, v) => s + v, 0);
 
@@ -180,7 +182,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold dark:text-white flex items-center gap-2">
             <Tag className="w-4 h-4 text-blue-500" />
-            Gastos por Categoria
+            Gastos por Categoria{yearMode ? " — Ano" : ""}
           </CardTitle>
           <Link to={createPageUrl("TransactionCategories")}>
             <Button variant="ghost" size="sm" className="text-xs gap-1 text-blue-600 dark:text-blue-400">
@@ -195,7 +197,10 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
             const spent = spending[cat.name] || 0;
             const pct = totalSpent > 0 ? (spent / totalSpent) * 100 : 0;
             const budget = budgets.find(b => b.category === cat.name);
-            const limit = budget?.monthly_limit;
+            // Meta é sempre cadastrada como limite mensal — no ano todo, o comparativo precisa
+            // ser contra a soma das 12 metas mensais, senão qualquer gasto acumulado do ano
+            // pareceria "estourado" contra o limite de um único mês.
+            const limit = budget?.monthly_limit ? budget.monthly_limit * (yearMode ? 12 : 1) : undefined;
             const isOver = limit && spent > limit;
             const overAmount = isOver ? spent - limit : 0;
             const limitPct = limit && limit > 0 ? (spent / limit) * 100 : null;

@@ -50,11 +50,17 @@ function extraFilter(rawQ) {
   return coerceDates(clean);
 }
 
+// Segundo critério de desempate quando a ordenação pedida empata (ex: várias transações com a
+// mesma "date") — sem isso o empate cai na ordem natural da tabela, que no SQLite tende a ser a
+// ordem de inserção crescente, fazendo o lançamento mais recente aparecer no fim do grupo em vez
+// de no topo.
 function buildOrderBy(sort) {
   if (!sort) return { created_date: 'desc' };
   const desc = sort.startsWith('-');
   const field = desc ? sort.slice(1) : sort;
-  return { [field]: desc ? 'desc' : 'asc' };
+  const primary = { [field]: desc ? 'desc' : 'asc' };
+  if (field === 'created_date') return primary;
+  return [primary, { created_date: 'desc' }];
 }
 
 function stripFields(body, fields) {

@@ -61,6 +61,7 @@ export default function TransactionCategories() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [yearMode, setYearMode] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -199,36 +200,38 @@ export default function TransactionCategories() {
 
   const filtered = categories.filter(c => c.type === activeTab && c.active !== false);
 
+  const matchesPeriod = (d) => yearMode
+    ? d.getFullYear() === selectedDate.getFullYear()
+    : d.getMonth() === selectedDate.getMonth() && d.getFullYear() === selectedDate.getFullYear();
+
   const monthlySpending = useMemo(() => {
     const map = {};
     transactions.forEach(t => {
       if (t.type !== 'expense' || t.is_food_voucher || t.invoice_id) return;
       const raw = t.date || t.created_date;
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
-      if (!d || isNaN(d)) return;
-      if (d.getMonth() !== selectedDate.getMonth() || d.getFullYear() !== selectedDate.getFullYear()) return;
+      if (!d || isNaN(d) || !matchesPeriod(d)) return;
       map[t.category] = (map[t.category] || 0) + Math.abs(t.amount || 0);
     });
     creditCardTxs.forEach(t => {
       const raw = t.purchase_date || t.created_date;
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
-      if (!d || isNaN(d)) return;
-      if (d.getMonth() !== selectedDate.getMonth() || d.getFullYear() !== selectedDate.getFullYear()) return;
+      if (!d || isNaN(d) || !matchesPeriod(d)) return;
       map[t.category] = (map[t.category] || 0) + Math.abs(t.amount || 0);
     });
     return map;
-  }, [transactions, creditCardTxs, selectedDate]);
+  }, [transactions, creditCardTxs, selectedDate, yearMode]);
 
   const monthlyIncome = useMemo(() => {
     const map = {};
     transactions.forEach(t => {
       if (t.type !== 'income') return;
       const d = parseISO(t.date || t.created_date);
-      if (d.getMonth() !== selectedDate.getMonth() || d.getFullYear() !== selectedDate.getFullYear()) return;
+      if (!matchesPeriod(d)) return;
       map[t.category] = (map[t.category] || 0) + Math.abs(t.amount || 0);
     });
     return map;
-  }, [transactions, selectedDate]);
+  }, [transactions, selectedDate, yearMode]);
 
   const maxSpending = useMemo(() =>
     Math.max(...filtered.map(c => monthlySpending[c.name] || 0), 1),
@@ -256,7 +259,12 @@ export default function TransactionCategories() {
             </div>
           </div>
           <div className="sm:ml-auto pl-12 sm:pl-0">
-            <MonthFilter selectedDate={selectedDate} onChange={setSelectedDate} />
+            <MonthFilter
+              selectedDate={selectedDate}
+              onChange={setSelectedDate}
+              yearMode={yearMode}
+              onToggleYearMode={() => setYearMode(v => !v)}
+            />
           </div>
         </div>
       </motion.div>
@@ -297,7 +305,9 @@ export default function TransactionCategories() {
           {filtered.map((cat, i) => {
             const budget = budgets.find(b => b.category === cat.name);
             const spent = monthlySpending[cat.name] || 0;
-            const limit = budget?.monthly_limit;
+            // A meta é sempre um limite mensal — no ano todo, compara contra a soma das 12
+            // metas mensais, senão o gasto acumulado do ano pareceria sempre estourado.
+            const limit = budget?.monthly_limit ? budget.monthly_limit * (yearMode ? 12 : 1) : undefined;
             const isOver = limit && spent > limit;
             const isWarning = limit && !isOver && (spent / limit) >= 0.8;
 
@@ -318,7 +328,7 @@ export default function TransactionCategories() {
                           {cat.is_default && <Badge variant="secondary" className="text-xs">Padrão</Badge>}
                           {limit && (
                             <span className="text-xs flex items-center gap-1" style={{ color: isOver ? '#ef4444' : cat.color || '#3b82f6' }}>
-                              <Target className="w-3 h-3" /> Limite: R$ {formatBRL(limit)}
+                              <Target className="w-3 h-3" /> Limite: R$ {formatBRL(limit)}{yearMode ? "/ano" : "/mês"}
                             </span>
                           )}
                         </div>
@@ -336,7 +346,7 @@ export default function TransactionCategories() {
                     {activeTab === 'expense' && (
                       <div>
                         <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-                          <span>Gasto este mês</span>
+                          <span>Gasto {yearMode ? "este ano" : "este mês"}</span>
                           <span className={`font-medium ${isOver ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}>
                             R$ {formatBRL(spent)}{limit ? ` / R$ ${formatBRL(limit)}` : ''}
                           </span>
@@ -357,7 +367,7 @@ export default function TransactionCategories() {
                     {activeTab === 'income' && (
                       <div>
                         <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-                          <span>Recebido este mês</span>
+                          <span>Recebido {yearMode ? "este ano" : "este mês"}</span>
                           <span className="font-medium text-slate-700 dark:text-slate-300">
                             {monthlyIncome[cat.name] ? `R$ ${formatBRL(monthlyIncome[cat.name])}` : 'R$ 0,00'}
                           </span>

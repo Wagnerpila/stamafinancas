@@ -23,6 +23,7 @@ import FoodVoucherConfig from "../components/dashboard/FoodVoucherConfig";
 import ShareDataButton from "../components/sharing/ShareDataButton";
 import FuturePlanningWidget from "../components/dashboard/FuturePlanningWidget";
 import CategorySpendingCompact from "../components/dashboard/CategorySpendingCompact";
+import SpendingBreakdownWidget from "../components/common/SpendingBreakdownWidget";
 import MonthFilter from "../components/common/MonthFilter";
 import PullToRefresh from "../components/mobile/PullToRefresh";
 import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
@@ -90,6 +91,30 @@ export default function Dashboard() {
              d.getFullYear() === selectedDate.getFullYear();
     });
   }, [transactions, selectedDate, yearMode]);
+
+  // Agrupa receitas do período por categoria (Salário, Pix, Dinheiro, Investimentos, etc. — o
+  // que o usuário tiver cadastrado como categoria de receita) pro widget "Receitas por Categoria".
+  const incomeBreakdown = useMemo(() => {
+    const totals = {};
+    const items = {};
+    monthlyTransactions.forEach(t => {
+      if (t.type !== 'income') return;
+      const key = t.category || 'other_income';
+      totals[key] = (totals[key] || 0) + Math.abs(t.amount || 0);
+      if (!items[key]) items[key] = [];
+      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.date });
+    });
+    Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
+
+    const catMeta = {};
+    categories.filter(c => c.type === 'income').forEach(c => { catMeta[c.name] = c; });
+    const groups = Object.keys(totals).map(key => {
+      const meta = catMeta[key];
+      return { key, name: meta?.name || key, icon: meta?.icon || "💰", color: meta?.color || "#10b981", amount: totals[key] };
+    }).sort((a, b) => b.amount - a.amount);
+
+    return { groups, itemsByGroup: items };
+  }, [monthlyTransactions, categories]);
 
   const stats = useMemo(() => {
     const totalIncome = transactions
@@ -246,7 +271,25 @@ export default function Dashboard() {
             creditCardTxs={creditCardTxs}
             budgets={budgets}
             selectedDate={selectedDate}
+            yearMode={yearMode}
             onCategoryChanged={loadInitialData}
+          />
+        </motion.div>
+
+        {/* Income Breakdown — Pix, Dinheiro, Salário, Investimentos e demais categorias de receita */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.17 }}
+          className="mb-8"
+        >
+          <SpendingBreakdownWidget
+            title={`Receitas por Categoria${yearMode ? " — Ano" : ""}`}
+            icon={<TrendingUp className="w-4 h-4 text-emerald-500" />}
+            groups={incomeBreakdown.groups}
+            itemsByGroup={incomeBreakdown.itemsByGroup}
+            emptyMessage="Nenhuma receita neste período."
+            positive
           />
         </motion.div>
 

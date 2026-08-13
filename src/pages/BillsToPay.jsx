@@ -19,6 +19,7 @@ export default function BillsToPay() {
   const [editingBill, setEditingBill] = useState(null);
   const [user, setUser] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [yearMode, setYearMode] = useState(false);
   // IDs de contas com pagamento em andamento — evita que um duplo-toque/duplo-clique (comum no
   // mobile, onde o app não dá feedback imediato de "carregando") dispare handleMarkAsPaid duas
   // vezes antes da primeira chamada terminar e recarregar a lista, duplicando a transação.
@@ -218,12 +219,23 @@ export default function BillsToPay() {
     }
   };
 
-  // Filtra e expande contas recorrentes para o mês selecionado
+  // Filtra e expande contas recorrentes para o mês selecionado (ou para os 12 meses do ano, se
+  // yearMode) — cada mês roda getBillsForMonth() independente pra reaproveitar toda a lógica de
+  // recorrência/parcela já existente, sem duplicar contas já pagas nesse mês específico.
   const filteredBills = useMemo(() => {
-    const result = getBillsForMonth(bills, selectedDate);
+    let result;
+    if (yearMode) {
+      const year = selectedDate.getFullYear();
+      result = [];
+      for (let m = 0; m < 12; m++) {
+        result.push(...getBillsForMonth(bills, new Date(year, m, 1)));
+      }
+    } else {
+      result = getBillsForMonth(bills, selectedDate);
+    }
     result.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
     return result;
-  }, [bills, selectedDate]);
+  }, [bills, selectedDate, yearMode]);
 
   const stats = useMemo(() => {
     const pending = filteredBills.filter(b => b.status === "pending");
@@ -256,7 +268,12 @@ export default function BillsToPay() {
             <p className="text-slate-600 dark:text-slate-300 mt-1">Gerencie suas contas pendentes e vencimentos</p>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <MonthFilter selectedDate={selectedDate} onChange={setSelectedDate} />
+            <MonthFilter
+              selectedDate={selectedDate}
+              onChange={setSelectedDate}
+              yearMode={yearMode}
+              onToggleYearMode={() => setYearMode(v => !v)}
+            />
             <Button
               onClick={() => { setShowForm(true); setEditingBill(null); }}
               className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
