@@ -13,8 +13,10 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
         // O calendário/valor desses campos é desenhado pelo navegador (fora do nosso CSS normal);
         // em navegadores mobile isso frequentemente ignora bg-transparent e nossas variáveis de
         // cor, resultando em texto branco sobre fundo branco (ilegível). Forçamos o tema nativo
-        // claro nesses campos especificamente, garantindo contraste em qualquer aparelho/tema.
-        isNativeDateTimeType(type) && "[color-scheme:light] bg-white text-slate-900 dark:bg-white dark:text-slate-900",
+        // claro nesses campos especificamente. Além disso usamos um fundo levemente acinzentado e
+        // uma borda mais forte (em vez de bg-white + border-input, quase invisível sobre um card
+        // claro) para o campo ficar visível como um controle distinto, não uma mancha branca.
+        isNativeDateTimeType(type) && "[color-scheme:light] bg-slate-100 text-slate-900 border-2 border-slate-300 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-300",
         className
       )}
       ref={ref}

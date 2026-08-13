@@ -131,44 +131,50 @@ export default function TransactionFilters({ filters, onFiltersChange, cards = [
             />
           </div>
           
-          <div className="relative">
-            <Input
-              type="date"
-              placeholder="Data inicial"
-              value={filters.dateFrom}
-              onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-              className={filters.dateFrom ? "pr-10" : ""}
-            />
-            {filters.dateFrom && (
-              <button
-                type="button"
-                onClick={() => handleFilterChange('dateFrom', '')}
-                className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                aria-label="Limpar data inicial"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+          <div>
+            {/* <input type="date"> ignora o atributo placeholder em todo navegador — sem esse
+                rótulo visível não dava pra saber qual campo era o inicial e qual era o final. */}
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 block">Data inicial</label>
+            <div className="relative">
+              <Input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                className={filters.dateFrom ? "pr-10" : ""}
+              />
+              {filters.dateFrom && (
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange('dateFrom', '')}
+                  className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                  aria-label="Limpar data inicial"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="relative">
-            <Input
-              type="date"
-              placeholder="Data final"
-              value={filters.dateTo}
-              onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-              className={filters.dateTo ? "pr-10" : ""}
-            />
-            {filters.dateTo && (
-              <button
-                type="button"
-                onClick={() => handleFilterChange('dateTo', '')}
-                className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                aria-label="Limpar data final"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+          <div>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 block">Data final</label>
+            <div className="relative">
+              <Input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                className={filters.dateTo ? "pr-10" : ""}
+              />
+              {filters.dateTo && (
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange('dateTo', '')}
+                  className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                  aria-label="Limpar data final"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
