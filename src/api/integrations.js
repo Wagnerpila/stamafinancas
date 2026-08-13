@@ -20,8 +20,12 @@ export async function parseTransactionText(text) {
   return api.post('/ai/parse-text', { text });
 }
 
-export async function statementImport(fileUrl) {
-  return api.post('/ai/statement-import', { file_url: fileUrl });
+export async function statementImport(fileUrl, categories) {
+  return api.post('/ai/statement-import', {
+    file_url: fileUrl,
+    expense_categories: categories?.expense,
+    income_categories: categories?.income,
+  });
 }
 
 export async function invoiceOCR({ file_url, card_name, user_categories, existing_installments }) {

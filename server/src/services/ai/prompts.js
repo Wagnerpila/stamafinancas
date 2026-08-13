@@ -45,7 +45,14 @@ export const statementImportSchema = {
   },
 };
 
-export function statementImportPrompt() {
+export function statementImportPrompt({ expenseCategories, incomeCategories } = {}) {
+  const expenseBlock = expenseCategories?.length ? expenseCategories.map((c) => `- ${c}`).join('\n') : null;
+  const incomeBlock = incomeCategories?.length ? incomeCategories.map((c) => `- ${c}`).join('\n') : null;
+  const categoriesInstruction = (expenseBlock || incomeBlock)
+    ? `Escolha, para cada lançamento, o nome EXATO de uma das categorias abaixo (não traduza nem invente outra), com base na descrição do lançamento (nome do estabelecimento, tipo de PIX, etc.):
+${expenseBlock ? `Categorias de despesa:\n${expenseBlock}` : ''}${expenseBlock && incomeBlock ? '\n' : ''}${incomeBlock ? `Categorias de receita:\n${incomeBlock}` : ''}`
+    : 'Para expense: food, transport, health, education, entertainment, shopping, bills, other_expense. Para income: salary, freelance, investment, other_income';
+
   return `Você é um especialista em leitura de extratos bancários brasileiros.
 Analise este extrato bancário e extraia TODAS as transações encontradas.
 
@@ -66,7 +73,7 @@ Para cada transação extraia:
 - amount: valor SEMPRE positivo (número sem sinal, sem R$, use ponto como decimal)
 - type: "income" ou "expense" conforme as regras acima
 - date: data no formato YYYY-MM-DD
-- category: categoria sugerida. Para expense: food, transport, health, education, entertainment, shopping, bills, other_expense. Para income: salary, freelance, investment, other_income
+- category: categoria sugerida a partir da descrição do lançamento. ${categoriesInstruction}
 
 Ignore linhas de saldo, totais, cabeçalhos e rodapés.
 Retorne JSON válido com todas as transações encontradas.`;

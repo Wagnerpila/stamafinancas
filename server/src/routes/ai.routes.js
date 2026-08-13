@@ -58,12 +58,12 @@ router.post('/parse-text', async (req, res, next) => {
 router.post('/statement-import', async (req, res, next) => {
   try {
     const provider = requireAIProvider();
-    const { file_url } = req.body || {};
+    const { file_url, expense_categories, income_categories } = req.body || {};
     if (!file_url) return res.status(400).json({ error: 'file_url é obrigatório.' });
 
     const file = await resolveFileForAI(file_url);
     const output = await provider.generateStructured({
-      prompt: statementImportPrompt(),
+      prompt: statementImportPrompt({ expenseCategories: expense_categories, incomeCategories: income_categories }),
       schema: statementImportSchema,
       files: [file],
     });

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { UploadFile, statementImport } from "@/api/integrations";
+import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, Upload, Loader2, AlertCircle } from "lucide-react";
@@ -48,14 +49,32 @@ export default function ImportStatement() {
     setIsProcessing(true);
     setError(null);
     try {
-      const { file_url } = await UploadFile({ file });
+      const [{ file_url }, dbCategories] = await Promise.all([
+        UploadFile({ file }),
+        base44.entities.TransactionCategory.list().catch(() => []),
+      ]);
+      const active = (dbCategories || []).filter((c) => c.active !== false);
+      const categories = {
+        income: active.filter((c) => c.type === "income").map((c) => c.name),
+        expense: active.filter((c) => c.type === "expense").map((c) => c.name),
+      };
 
       // Prompt/schema vivem no backend (server/src/services/ai/prompts.js) — aqui só chama o
       // endpoint /api/ai/statement-import, que usa o provedor de IA configurado no servidor.
-      const result = await statementImport(file_url);
+      // Envia as categorias cadastradas pelo usuário para a IA sugerir a categoria de cada
+      // lançamento pela descrição, igual já é feito na importação de fatura de cartão.
+      const result = await statementImport(file_url, categories);
 
-      const transactions = result?.status === "success" ? result.output?.transactions : null;
-      if (transactions?.length > 0) {
+      const rawTransactions = result?.status === "success" ? result.output?.transactions : null;
+      if (rawTransactions?.length > 0) {
+        // A IA foi instruída a usar o nome exato de uma categoria do usuário, mas casa aqui de
+        // forma case-insensitive por segurança; sem correspondência, deixa em branco para o
+        // usuário escolher na tela de revisão (evita salvar uma categoria fora da lista dele).
+        const transactions = rawTransactions.map((t) => {
+          const list = t.type === "income" ? categories.income : categories.expense;
+          const matched = list.find((name) => name.toLowerCase() === String(t.category || "").toLowerCase());
+          return { ...t, category: matched || "" };
+        });
         navigate(createPageUrl("ReviewImportedTransactions"), { state: { transactions } });
       } else {
         throw new Error("Não foi possível extrair nenhuma transação do arquivo. Verifique o formato ou tente outro arquivo.");
