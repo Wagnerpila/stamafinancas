@@ -29,6 +29,7 @@ export default function CreditCardInvoices() {
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
   const [deletingInvoice, setDeletingInvoice] = useState(false);
+  const [cleaningDuplicates, setCleaningDuplicates] = useState(false);
 
   const loadData = async () => {
     try {
@@ -92,6 +93,10 @@ export default function CreditCardInvoices() {
   // Usa a categoria como está (pode ser nome em português vindo do OCR)
   const safeCategory = (cat) => cat || "other_expense";
 
+  function normalizeDesc(s) {
+    return String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
+  }
+
   // Parseia "2/12", "PAR 03/06", "3 de 10" → { current, total }
   const parseInstallment = (info) => {
     if (!info) return null;
@@ -142,6 +147,46 @@ export default function CreditCardInvoices() {
     }
   };
 
+  // Ferramenta de manutenção: antes desta correção, pagar uma fatura recriava os compromissos
+  // futuros (parcelas) que a importação da própria fatura já tinha criado — sem checar se já
+  // existiam. Isso deixou dados duplicados em cartões que já foram usados dessa forma, inflando
+  // o "usado" no limite disponível. Agrupa os Bills deste cartão por título (que já contém a
+  // descrição + "Parcela N/Total", igual verificado ao criar) e apaga as cópias extras,
+  // mantendo a que já estiver paga (se houver) ou a mais antiga.
+  const cleanupDuplicateBills = async () => {
+    if (!confirm("Procurar e remover compromissos futuros (parcelas) duplicados deste cartão?")) return;
+    setCleaningDuplicates(true);
+    try {
+      const bills = await base44.entities.Bill.filter({ card_id: cardId, category: "credit_card" });
+      const groups = {};
+      bills.forEach(b => {
+        const key = normalizeDesc(b.title);
+        (groups[key] = groups[key] || []).push(b);
+      });
+
+      const toDelete = [];
+      Object.values(groups).forEach(group => {
+        if (group.length <= 1) return;
+        const sorted = [...group].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+        const keep = sorted.find(b => b.status === "paid") || sorted[0];
+        sorted.forEach(b => { if (b.id !== keep.id) toDelete.push(b); });
+      });
+
+      if (toDelete.length === 0) {
+        alert("Nenhuma duplicata encontrada.");
+        return;
+      }
+      await Promise.all(toDelete.map(b => base44.entities.Bill.delete(b.id)));
+      alert(`${toDelete.length} compromisso(s) duplicado(s) removido(s).`);
+      await loadData();
+    } catch (error) {
+      console.error("Erro ao limpar duplicatas:", error);
+      alert(`Erro ao limpar duplicatas: ${error.message || error}`);
+    } finally {
+      setCleaningDuplicates(false);
+    }
+  };
+
   const payInvoice = async (invoice) => {
     if (confirm(`Confirmar pagamento de R$ ${invoice.total_amount.toFixed(2)}?`)) {
       try {
@@ -164,6 +209,15 @@ export default function CreditCardInvoices() {
           }));
           await base44.entities.Transaction.bulkCreate(transactionsToCreate);
 
+          // Compromissos futuros (Bill) que já existem pra este cartão — uma parcela pode já ter
+          // ganhado seu placeholder quando a PRÓPRIA fatura foi importada (InvoiceOCRDialog.jsx
+          // já cria essas parcelas restantes no momento do import). Sem checar isso aqui, pagar a
+          // fatura criava um SEGUNDO conjunto de placeholders pras mesmas parcelas futuras,
+          // dobrando o valor "comprometido" contado no limite disponível do cartão.
+          const existingCardBills = await base44.entities.Bill.filter({
+            card_id: cardId, category: "credit_card"
+          });
+
           // Criar compromissos futuros para parcelas restantes
           const billsToCreate = [];
           for (const tx of invoiceTxs) {
@@ -184,7 +238,14 @@ export default function CreditCardInvoices() {
             // Ancora no vencimento da PRÓPRIA fatura sendo paga, não em "hoje" — senão pagar uma
             // fatura atrasada desalinhava o cronograma das parcelas futuras restantes.
             const dueAnchor = new Date(invoice.due_date.slice(0, 10) + "T00:00:00");
+            const descNorm = normalizeDesc(tx.description);
             for (let offset = 1; offset <= remaining; offset++) {
+              const installmentNumber = current + offset;
+              const alreadyBilled = existingCardBills.some(b =>
+                normalizeDesc(b.title).startsWith(descNorm) && b.title.endsWith(`Parcela ${installmentNumber}/${total}`)
+              );
+              if (alreadyBilled) continue;
+
               const futureDate = new Date(dueAnchor.getFullYear(), dueAnchor.getMonth() + offset, card.due_day || 10);
               billsToCreate.push({
                 title: `${tx.description} — Parcela ${current + offset}/${total}`,
@@ -268,7 +329,15 @@ export default function CreditCardInvoices() {
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Faturas - {card.name}</h1>
           <p className="text-slate-600 dark:text-slate-300">Gerencie as faturas do cartão</p>
         </div>
-
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={cleanupDuplicateBills}
+          disabled={cleaningDuplicates}
+          title="Remove compromissos futuros (parcelas) duplicados deste cartão"
+        >
+          {cleaningDuplicates ? "Verificando..." : "Corrigir duplicidades"}
+        </Button>
       </div>
 
       {unbilledAmount > 0 && (
