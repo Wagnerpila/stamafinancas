@@ -1,6 +1,20 @@
 // All AI prompts/schemas used across the app, preserved verbatim from the previous
 // base44-hosted InvokeLLM/ExtractDataFromUploadedFile call sites (see migration catalog).
 
+// Monta a instrução de categoria compartilhada por todo fluxo que extrai transações via IA
+// (extrato, recibo/foto, comando de voz/texto): sem isso, a IA inventa categorias em inglês
+// (ex: "food", "transport") que não existem na lista do usuário — o app então não consegue
+// casar com nenhuma categoria real e mostra "(categoria removida)" pro usuário.
+function categoriesInstruction({ expenseCategories, incomeCategories } = {}) {
+  const expenseBlock = expenseCategories?.length ? expenseCategories.map((c) => `- ${c}`).join('\n') : null;
+  const incomeBlock = incomeCategories?.length ? incomeCategories.map((c) => `- ${c}`).join('\n') : null;
+  if (!expenseBlock && !incomeBlock) {
+    return 'Use uma categoria descritiva em português (ex: "Alimentação", "Transporte", "Salário") — nunca em inglês.';
+  }
+  return `Escolha o nome EXATO de uma das categorias abaixo (não traduza nem invente outra, nunca use termos em inglês como "food" ou "transport"). Se genuinamente não der para identificar, use a categoria de "outras despesas"/"outras receitas" da lista (ou deixe null se não houver uma assim):
+${expenseBlock ? `Categorias de despesa:\n${expenseBlock}` : ''}${expenseBlock && incomeBlock ? '\n' : ''}${incomeBlock ? `Categorias de receita:\n${incomeBlock}` : ''}`;
+}
+
 export const transactionExtractionSchema = {
   type: 'object',
   properties: {
@@ -18,12 +32,15 @@ export const transactionExtractionSchema = {
   required: ['description', 'amount', 'type', 'date'],
 };
 
-export function receiptOcrPrompt() {
-  return 'Analise esta imagem de comprovante/recibo de pagamento e extraia os dados da transação: descrição do estabelecimento ou item, valor, data e uma categoria apropriada.';
+export function receiptOcrPrompt({ expenseCategories, incomeCategories } = {}) {
+  return `Analise esta imagem de comprovante/recibo de pagamento e extraia os dados da transação: descrição do estabelecimento ou item, valor, data e categoria.
+Categoria: ${categoriesInstruction({ expenseCategories, incomeCategories })}`;
 }
 
-export function textTransactionPrompt(transcript) {
-  return `Extraia os detalhes de uma transação financeira a partir do seguinte texto: "${transcript}". Responda APENAS com um objeto JSON. O valor (amount) deve ser negativo para despesas. A data (date) deve estar no formato YYYY-MM-DD. Se o texto mencionar "vale alimentação", "vale refeição", "VA", "VR" ou similar, defina is_food_voucher como true e category como "food".`;
+export function textTransactionPrompt(transcript, { expenseCategories, incomeCategories } = {}) {
+  return `Extraia os detalhes de uma transação financeira a partir do seguinte texto: "${transcript}". Responda APENAS com um objeto JSON. O valor (amount) deve ser negativo para despesas. A data (date) deve estar no formato YYYY-MM-DD.
+Se o texto mencionar "vale alimentação", "vale refeição", "VA", "VR" ou similar, defina is_food_voucher como true e escolha a categoria de alimentação da lista abaixo (se houver).
+Categoria: ${categoriesInstruction({ expenseCategories, incomeCategories })}`;
 }
 
 export const statementImportSchema = {
@@ -46,13 +63,6 @@ export const statementImportSchema = {
 };
 
 export function statementImportPrompt({ expenseCategories, incomeCategories } = {}) {
-  const expenseBlock = expenseCategories?.length ? expenseCategories.map((c) => `- ${c}`).join('\n') : null;
-  const incomeBlock = incomeCategories?.length ? incomeCategories.map((c) => `- ${c}`).join('\n') : null;
-  const categoriesInstruction = (expenseBlock || incomeBlock)
-    ? `Escolha, para cada lançamento, o nome EXATO de uma das categorias abaixo (não traduza nem invente outra), com base na descrição do lançamento (nome do estabelecimento, tipo de PIX, etc.). Muitos PIX e transferências não têm um estabelecimento claro na descrição — se genuinamente não der para identificar a categoria, use a categoria de "outras despesas"/"outras receitas" da lista (ou deixe null se não houver uma assim), em vez de chutar uma categoria específica errada:
-${expenseBlock ? `Categorias de despesa:\n${expenseBlock}` : ''}${expenseBlock && incomeBlock ? '\n' : ''}${incomeBlock ? `Categorias de receita:\n${incomeBlock}` : ''}`
-    : 'Para expense: food, transport, health, education, entertainment, shopping, bills, other_expense. Para income: salary, freelance, investment, other_income';
-
   return `Você é um especialista em leitura de extratos bancários brasileiros.
 Analise este extrato bancário e extraia TODAS as transações encontradas.
 
@@ -73,7 +83,7 @@ Para cada transação extraia:
 - amount: valor SEMPRE positivo (número sem sinal, sem R$, use ponto como decimal)
 - type: "income" ou "expense" conforme as regras acima
 - date: data no formato YYYY-MM-DD
-- category: categoria sugerida a partir da descrição do lançamento. ${categoriesInstruction}
+- category: categoria sugerida a partir da descrição do lançamento (nome do estabelecimento, tipo de PIX, etc). Muitos PIX e transferências não têm um estabelecimento claro na descrição — nesse caso use a categoria de "outras despesas"/"outras receitas". ${categoriesInstruction({ expenseCategories, incomeCategories })}
 
 Ignore linhas de saldo, totais, cabeçalhos e rodapés.
 Retorne JSON válido com todas as transações encontradas.`;

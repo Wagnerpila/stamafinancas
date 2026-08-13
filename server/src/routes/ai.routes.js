@@ -22,12 +22,12 @@ router.use(requireAuth);
 router.post('/receipt-ocr', async (req, res, next) => {
   try {
     const provider = requireAIProvider();
-    const { file_url } = req.body || {};
+    const { file_url, expense_categories, income_categories } = req.body || {};
     if (!file_url) return res.status(400).json({ error: 'file_url é obrigatório.' });
 
     const file = await resolveFileForAI(file_url);
     const output = await provider.generateStructured({
-      prompt: receiptOcrPrompt(),
+      prompt: receiptOcrPrompt({ expenseCategories: expense_categories, incomeCategories: income_categories }),
       schema: transactionExtractionSchema,
       files: [file],
     });
@@ -41,11 +41,11 @@ router.post('/receipt-ocr', async (req, res, next) => {
 router.post('/parse-text', async (req, res, next) => {
   try {
     const provider = requireAIProvider();
-    const { text } = req.body || {};
+    const { text, expense_categories, income_categories } = req.body || {};
     if (!text) return res.status(400).json({ error: 'text é obrigatório.' });
 
     const output = await provider.generateStructured({
-      prompt: textTransactionPrompt(text),
+      prompt: textTransactionPrompt(text, { expenseCategories: expense_categories, incomeCategories: income_categories }),
       schema: transactionExtractionSchema,
     });
     res.json({ status: 'success', output });

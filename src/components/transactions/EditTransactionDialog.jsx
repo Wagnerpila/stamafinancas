@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Save, X } from "lucide-react";
 import { Transaction } from "@/entities/Transaction";
 import { base44 } from "@/api/base44Client";
+import { resolveCategoryName } from "@/lib/categories";
 
 export default function EditTransactionDialog({ transaction, open, onClose, onSaved }) {
   const [formData, setFormData] = useState(transaction ? {
@@ -30,6 +31,23 @@ export default function EditTransactionDialog({ transaction, open, onClose, onSa
       }).catch(() => {});
     }).catch(() => {});
   }, [open]);
+
+  // Se a categoria salva estiver "órfã" (não bate com nenhuma categoria atual — comum em
+  // lançamentos antigos criados por voz/foto antes desta correção, salvos com valores em inglês
+  // tipo "food"), tenta resolver pro nome certo assim que as categorias carregam. Roda uma única
+  // vez por transação aberta — não briga com uma escolha manual do usuário depois disso.
+  const resolvedForRef = React.useRef(null);
+  useEffect(() => {
+    if (!open || !transaction || allCategories.length === 0) return;
+    if (resolvedForRef.current === transaction.id) return;
+    resolvedForRef.current = transaction.id;
+    const names = allCategories.filter(c => c.type === formData.type).map(c => c.name);
+    const isValid = names.some(n => n.toLowerCase() === String(formData.category || "").toLowerCase());
+    if (formData.category && !isValid) {
+      const resolved = resolveCategoryName(formData.category, names);
+      if (resolved) setFormData(prev => ({ ...prev, category: resolved }));
+    }
+  }, [open, transaction, allCategories, formData.type, formData.category]);
 
   // Reset form when transaction changes
   React.useEffect(() => {

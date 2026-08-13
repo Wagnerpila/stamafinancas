@@ -14,6 +14,7 @@ import { ArrowUpRight, ArrowDownRight, Save, AlertTriangle } from "lucide-react"
 import { motion } from "framer-motion";
 import { usePlanAccess } from "../common/PlanRestriction";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { resolveCategoryName } from "@/lib/categories";
 
 const repeatFrequencyOptions = [
   { value: "monthly", label: "Mensal" },
@@ -62,6 +63,22 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
     notes: initialData?.notes || '',
     is_food_voucher: initialData?.is_food_voucher || false
   });
+
+  // Roda uma única vez, quando as categorias reais do usuário terminam de carregar: se a
+  // categoria vinda de fora (IA por voz/foto/arquivo) não bate com nenhuma categoria real —
+  // ex: valor legado em inglês tipo "food" —, tenta resolver pro nome certo. Sem isso o campo
+  // aparecia como "food (categoria removida)" em vez de já vir com a categoria certa selecionada.
+  const categoryResolvedRef = React.useRef(false);
+  useEffect(() => {
+    if (!initialData?.category || categoryResolvedRef.current) return;
+    const list = dynamicCategories[formData.type] || [];
+    if (list.length === 0) return; // ainda carregando
+    categoryResolvedRef.current = true;
+    const names = list.map(c => c.value);
+    if (names.some(name => name.toLowerCase() === initialData.category.toLowerCase())) return; // já é válida
+    const resolved = resolveCategoryName(initialData.category, names);
+    setFormData(prev => ({ ...prev, category: resolved }));
+  }, [dynamicCategories, initialData, formData.type]);
 
   const [user, setUser] = useState(null);
   const [error, setError] = useState('');

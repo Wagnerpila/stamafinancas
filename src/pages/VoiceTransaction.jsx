@@ -99,24 +99,42 @@ export default function VoiceTransaction() {
     setIsProcessing(true);
     setError(null);
     try {
-      const { output: result } = await parseTransactionText(transcript);
+      // Envia as categorias cadastradas pelo usuário pra IA sugerir uma categoria que realmente
+      // existe (sem isso ela inventava valores em inglês tipo "food", que não batiam com nenhuma
+      // categoria real e apareciam como "(categoria removida)" na revisão).
+      const cats = await base44.entities.TransactionCategory.list().catch(() => []);
+      const active = (cats || []).filter(c => c.active !== false);
+      const categories = {
+        income: active.filter(c => c.type === 'income').map(c => c.name),
+        expense: active.filter(c => c.type === 'expense').map(c => c.name),
+      };
+
+      const { output: result } = await parseTransactionText(transcript, categories);
 
       if (result) {
         // Check if transcript mentions food voucher
         const isFoodVoucher = /vale\s*(alimenta[cç][aã]o|refei[cç][aã]o)|va|vr/i.test(transcript);
+        const type = result.amount < 0 ? 'expense' : 'income';
+        const list = type === 'income' ? categories.income : categories.expense;
+        const matched = list.find(name => name.toLowerCase() === String(result.category || '').toLowerCase());
+        // Sem correspondência exata: pra vale-alimentação tenta achar uma categoria de
+        // "alimentação" do usuário; senão deixa em branco pro usuário escolher na revisão, em
+        // vez de gravar um valor (ex: "food") que não existe na lista dele.
+        const foodCategory = list.find(name => name.toLowerCase().includes('aliment'));
+        const category = matched || ((result.is_food_voucher || isFoodVoucher) ? foodCategory : null) || '';
 
         // Amount might be positive from LLM, but should be stored as positive for expense type
         const processedResult = {
           ...result,
           amount: Math.abs(result.amount || 0),
-          type: result.amount < 0 ? 'expense' : 'income',
+          type,
           date: result.date || new Date().toISOString().split('T')[0],
           is_food_voucher: result.is_food_voucher || isFoodVoucher,
-          category: (result.is_food_voucher || isFoodVoucher) ? 'food' : result.category
+          category
         };
 
-        navigate(createPageUrl("ManualTransaction"), { 
-          state: { transactionData: processedResult } 
+        navigate(createPageUrl("ManualTransaction"), {
+          state: { transactionData: processedResult }
         });
       } else {
         throw new Error("Não consegui entender os detalhes da transação. Tente ser mais específico.");

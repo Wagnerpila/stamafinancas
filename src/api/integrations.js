@@ -12,12 +12,20 @@ export async function UploadFile({ file }) {
 // previous base44 implementation, but now hits a purpose-built backend endpoint with the
 // prompt/schema controlled server-side (see server/src/services/ai/prompts.js).
 
-export async function receiptOCR(fileUrl) {
-  return api.post('/ai/receipt-ocr', { file_url: fileUrl });
+export async function receiptOCR(fileUrl, categories) {
+  return api.post('/ai/receipt-ocr', {
+    file_url: fileUrl,
+    expense_categories: categories?.expense,
+    income_categories: categories?.income,
+  });
 }
 
-export async function parseTransactionText(text) {
-  return api.post('/ai/parse-text', { text });
+export async function parseTransactionText(text, categories) {
+  return api.post('/ai/parse-text', {
+    text,
+    expense_categories: categories?.expense,
+    income_categories: categories?.income,
+  });
 }
 
 export async function statementImport(fileUrl, categories) {

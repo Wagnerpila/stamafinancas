@@ -142,11 +142,30 @@ export default function PhotoTransaction() {
       const file = new File([blob], `comprovante-${Date.now()}.jpg`, { type: 'image/jpeg' });
       
       const { file_url } = await UploadFile({ file });
-      const result = await receiptOCR(file_url);
+
+      // Envia as categorias cadastradas pelo usuário pra IA sugerir uma categoria que realmente
+      // existe (sem isso ela inventava valores em inglês tipo "food", que não batem com nenhuma
+      // categoria real e aparecem como "(categoria removida)" na revisão).
+      const cats = await base44.entities.TransactionCategory.list().catch(() => []);
+      const active = (cats || []).filter(c => c.active !== false);
+      const categories = {
+        income: active.filter(c => c.type === 'income').map(c => c.name),
+        expense: active.filter(c => c.type === 'expense').map(c => c.name),
+      };
+
+      const result = await receiptOCR(file_url, categories);
 
       if (result.status === "success" && result.output) {
-        navigate(createPageUrl("ManualTransaction"), { 
-          state: { transactionData: { ...result.output, date: result.output.date || new Date().toISOString().split('T')[0] } } 
+        const list = result.output.type === 'income' ? categories.income : categories.expense;
+        const matched = list.find(name => name.toLowerCase() === String(result.output.category || '').toLowerCase());
+        navigate(createPageUrl("ManualTransaction"), {
+          state: {
+            transactionData: {
+              ...result.output,
+              category: matched || '',
+              date: result.output.date || new Date().toISOString().split('T')[0]
+            }
+          }
         });
       } else {
         throw new Error(result.details || "Não foi possível extrair os dados da foto.");
