@@ -35,25 +35,39 @@ export default function CreditCards() {
   const [editingCard, setEditingCard] = useState(null);
   const [ocrCard, setOcrCard] = useState(null);
 
-  const calculateAvailableLimit = (card, allInvoices) => {
-    // Apenas faturas abertas ou fechadas (não pagas) consomem limite
+  // O limite usado precisa considerar não só a fatura atual, mas também as parcelas futuras já
+  // comprometidas (uma compra parcelada em 10x reserva o valor das 10 parcelas do limite desde a
+  // compra, não só a parcela do mês corrente — é assim que cartão de crédito real funciona).
+  // Essas parcelas futuras, antes de virarem uma fatura de verdade, existem como registros de
+  // Bill (categoria "credit_card", criados ao pagar a fatura anterior — ver CreditCardInvoices.jsx
+  // e InvoiceOCRDialog.jsx). Ao pagar uma fatura, ela sai da soma (não é mais "open"/"closed") e
+  // o limite disponível sobe só o valor daquela fatura — as parcelas futuras restantes continuam
+  // reservadas até vencerem, uma a uma.
+  const calculateAvailableLimit = (card, allInvoices, allBills) => {
     let invoiceUsed = 0;
     allInvoices
       .filter(inv => inv.card_id === card.id && (inv.status === "open" || inv.status === "closed"))
       .forEach(inv => { invoiceUsed += inv.total_amount || 0; });
 
-    const availableLimit = card.limit - invoiceUsed;
-    return { ...card, availableLimit: availableLimit > 0 ? availableLimit : 0, usedLimit: invoiceUsed };
+    let futureUsed = 0;
+    allBills
+      .filter(b => b.card_id === card.id && b.category === "credit_card" && b.status === "pending")
+      .forEach(b => { futureUsed += b.amount || 0; });
+
+    const totalUsed = invoiceUsed + futureUsed;
+    const availableLimit = card.limit - totalUsed;
+    return { ...card, availableLimit: availableLimit > 0 ? availableLimit : 0, usedLimit: totalUsed };
   };
 
   const loadCards = async () => {
     try {
       const user = await base44.auth.me();
-      const [data, allInvoices] = await Promise.all([
+      const [data, allInvoices, allBills] = await Promise.all([
         base44.entities.CreditCard.filter({ created_by: user.email }, "-created_date"),
         base44.entities.CreditCardInvoice.filter({ created_by: user.email }),
+        base44.entities.Bill.filter({ created_by: user.email, type: "payable", category: "credit_card" }),
       ]);
-      const cardsWithBalances = data.map(card => calculateAvailableLimit(card, allInvoices));
+      const cardsWithBalances = data.map(card => calculateAvailableLimit(card, allInvoices, allBills));
       setCards(data);
       setCardsWithBalance(cardsWithBalances);
     } catch (error) {

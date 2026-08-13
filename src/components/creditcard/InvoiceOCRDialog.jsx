@@ -211,6 +211,21 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
         created.push({ tx, parsed, it });
       }
 
+      // 1b. Remove o "compromisso futuro" (Bill) que uma fatura anterior criou pra essa mesma
+      // parcela — ela virou a transação real acima, então o placeholder ficaria contando o
+      // mesmo valor duas vezes no limite disponível do cartão (ver CreditCards.jsx).
+      const placeholdersToDelete = created
+        .filter(({ parsed }) => parsed)
+        .map(({ it, parsed }) => existingCardBills.find(b =>
+          b.status === "pending" &&
+          normalizeDesc(b.title).startsWith(normalizeDesc(it.description)) &&
+          b.title.endsWith(`Parcela ${parsed.current}/${parsed.total}`)
+        ))
+        .filter(Boolean);
+      if (placeholdersToDelete.length > 0) {
+        await Promise.all(placeholdersToDelete.map(b => base44.entities.Bill.delete(b.id)));
+      }
+
       // 2. Criar fatura automaticamente
       // Ancora as datas no mês de referência da PRÓPRIA fatura (reference_month), não em "hoje"
       // — importar uma fatura atrasada ou de meses passados fazia todo o cronograma de vencimento
