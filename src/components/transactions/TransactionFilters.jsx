@@ -21,9 +21,13 @@ const categoryLabels = {
   other_expense: "Outras Despesas"
 };
 
-export default function TransactionFilters({ filters, onFiltersChange }) {
+export default function TransactionFilters({ filters, onFiltersChange, cards = [] }) {
   const handleFilterChange = (key, value) => {
-    onFiltersChange({ ...filters, [key]: value });
+    const next = { ...filters, [key]: value };
+    // Ao sair do filtro "Cartão de crédito" o sub-filtro de qual cartão perde o sentido — reseta
+    // pra não deixar um filtro escondido (cardId) ainda ativo sem aparecer na tela.
+    if (key === 'source' && value !== 'credit_card') next.cardId = 'all';
+    onFiltersChange(next);
   };
 
   const clearFilters = () => {
@@ -31,6 +35,7 @@ export default function TransactionFilters({ filters, onFiltersChange }) {
       type: 'all',
       category: 'all',
       source: 'all',
+      cardId: 'all',
       search: '',
       dateFrom: '',
       dateTo: ''
@@ -104,6 +109,20 @@ export default function TransactionFilters({ filters, onFiltersChange }) {
             </Select>
           </div>
 
+          {filters.source === 'credit_card' && cards.length > 1 && (
+            <div>
+              <Select value={filters.cardId || 'all'} onValueChange={(value) => handleFilterChange('cardId', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Qual cartão" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os cartões</SelectItem>
+                  {cards.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
             <Input
               placeholder="Buscar descrição..."
@@ -112,22 +131,44 @@ export default function TransactionFilters({ filters, onFiltersChange }) {
             />
           </div>
           
-          <div>
+          <div className="relative">
             <Input
               type="date"
               placeholder="Data inicial"
               value={filters.dateFrom}
               onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+              className={filters.dateFrom ? "pr-10" : ""}
             />
+            {filters.dateFrom && (
+              <button
+                type="button"
+                onClick={() => handleFilterChange('dateFrom', '')}
+                className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                aria-label="Limpar data inicial"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-          
-          <div>
+
+          <div className="relative">
             <Input
               type="date"
               placeholder="Data final"
               value={filters.dateTo}
               onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+              className={filters.dateTo ? "pr-10" : ""}
             />
+            {filters.dateTo && (
+              <button
+                type="button"
+                onClick={() => handleFilterChange('dateTo', '')}
+                className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                aria-label="Limpar data final"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </CardContent>

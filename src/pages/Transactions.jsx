@@ -21,10 +21,12 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const [cards, setCards] = useState([]);
   const [filters, setFilters] = useState({
     type: 'all',
     category: 'all',
     source: 'all',
+    cardId: 'all',
     search: '',
     dateFrom: '',
     dateTo: ''
@@ -38,6 +40,7 @@ export default function Transactions() {
         const currentUser = await User.me();
         setUser(currentUser);
         await loadTransactions(currentUser.email);
+        base44.entities.CreditCard.filter({ created_by: currentUser.email }).then(setCards).catch(() => {});
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error);
       } finally {
@@ -116,6 +119,9 @@ export default function Transactions() {
 
       // Filtro por origem (extrato importado / cartão de crédito / outro)
       if (filters.source !== 'all' && (transaction.source || 'manual') !== filters.source) return false;
+
+      // Sub-filtro por cartão específico (só relevante com origem "Cartão de crédito")
+      if (filters.source === 'credit_card' && filters.cardId && filters.cardId !== 'all' && transaction.credit_card_id !== filters.cardId) return false;
 
       // Filtro por busca
       if (filters.search && !transaction.description.toLowerCase().includes(filters.search.toLowerCase())) return false;
@@ -224,7 +230,7 @@ export default function Transactions() {
         onSaved={handleEditSaved}
       />
 
-      <TransactionFilters filters={filters} onFiltersChange={setFilters} />
+      <TransactionFilters filters={filters} onFiltersChange={setFilters} cards={cards} />
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}

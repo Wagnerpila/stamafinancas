@@ -212,6 +212,7 @@ export default function CreditCardInvoices() {
             date: today,
             payment_method: "credit_card",
             source: "credit_card",
+            credit_card_id: cardId,
             notes: `Fatura do cartão ${card.name}`
           });
         }
