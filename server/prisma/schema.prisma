@@ -76,6 +76,7 @@ model Transaction {
   category        String
   date            DateTime
   payment_method  String   @default("cash") // cash|pix|debit|credit_card|food_voucher
+  source          String   @default("manual") // manual|statement_import|credit_card — origem do lançamento, usada no filtro da tela de Transações
   credit_card_id  String?
   invoice_id      String?
   notes           String?

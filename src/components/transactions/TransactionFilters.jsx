@@ -30,6 +30,7 @@ export default function TransactionFilters({ filters, onFiltersChange }) {
     onFiltersChange({
       type: 'all',
       category: 'all',
+      source: 'all',
       search: '',
       dateFrom: '',
       dateTo: ''
@@ -61,7 +62,7 @@ export default function TransactionFilters({ filters, onFiltersChange }) {
           )}
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-4">
           <div>
             <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
               <SelectTrigger>
@@ -74,7 +75,7 @@ export default function TransactionFilters({ filters, onFiltersChange }) {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div>
             <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
               <SelectTrigger>
@@ -88,7 +89,21 @@ export default function TransactionFilters({ filters, onFiltersChange }) {
               </SelectContent>
             </Select>
           </div>
-          
+
+          <div>
+            <Select value={filters.source} onValueChange={(value) => handleFilterChange('source', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Origem" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as origens</SelectItem>
+                <SelectItem value="statement_import">Extrato importado</SelectItem>
+                <SelectItem value="credit_card">Cartão de crédito</SelectItem>
+                <SelectItem value="manual">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <Input
               placeholder="Buscar descrição..."

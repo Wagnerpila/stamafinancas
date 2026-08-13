@@ -24,6 +24,7 @@ export default function Transactions() {
   const [filters, setFilters] = useState({
     type: 'all',
     category: 'all',
+    source: 'all',
     search: '',
     dateFrom: '',
     dateTo: ''
@@ -112,7 +113,10 @@ export default function Transactions() {
       
       // Filtro por categoria
       if (filters.category !== 'all' && transaction.category !== filters.category) return false;
-      
+
+      // Filtro por origem (extrato importado / cartão de crédito / outro)
+      if (filters.source !== 'all' && (transaction.source || 'manual') !== filters.source) return false;
+
       // Filtro por busca
       if (filters.search && !transaction.description.toLowerCase().includes(filters.search.toLowerCase())) return false;
       

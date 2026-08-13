@@ -20,6 +20,7 @@ const transactionSchema = {
     category: { type: 'string' },
     date: { type: 'string', description: 'Formato YYYY-MM-DD' },
     payment_method: { type: 'string', enum: ['cash', 'pix', 'debit', 'credit_card', 'food_voucher'] },
+    source: { type: 'string', enum: ['manual', 'statement_import', 'credit_card'], description: 'Origem do lançamento (usada no filtro da tela de Transações)' },
     notes: { type: 'string' },
     is_food_voucher: { type: 'boolean' },
   },

@@ -37,7 +37,8 @@ export default function ReviewImportedTransactions() {
         type: t.type || (t.amount < 0 ? 'expense' : 'income'),
         amount: Math.abs(t.amount),
         category: t.category || '',
-        date: t.date ? new Date(t.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        date: t.date ? new Date(t.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        source: 'statement_import' // esta tela só é alcançada a partir da importação de extrato
       }));
       setTransactions(formattedTransactions);
     } else {

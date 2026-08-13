@@ -157,6 +157,7 @@ export default function CreditCardInvoices() {
             category: safeCategory(tx.category),
             date: today,
             payment_method: "credit_card",
+            source: "credit_card",
             credit_card_id: cardId,
             invoice_id: invoice.id,
             notes: tx.notes || `Fatura ${card.name} ${invoice.reference_month}`
@@ -210,6 +211,7 @@ export default function CreditCardInvoices() {
             category: "bills",
             date: today,
             payment_method: "credit_card",
+            source: "credit_card",
             notes: `Fatura do cartão ${card.name}`
           });
         }
