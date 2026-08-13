@@ -116,9 +116,12 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
         const card = creditCards.find(c => c.id === formData.credit_card_id);
         if (!card) return;
 
-        // Faturas em aberto/fechadas deste cartão
-        const [allInvoices, futureBills] = await Promise.all([
+        // Faturas em aberto/fechadas, transações ainda não faturadas e compromissos futuros
+        // deste cartão — mesmo cálculo de CreditCards.jsx/calculateAvailableLimit (ver lá a
+        // explicação dos 3 baldes que compõem o limite usado).
+        const [allInvoices, cardTxs, futureBills] = await Promise.all([
           base44.entities.CreditCardInvoice.filter({ card_id: card.id }),
+          base44.entities.CreditCardTransaction.filter({ card_id: card.id }),
           base44.entities.Bill.filter({ card_id: card.id, category: "credit_card", status: "pending" }),
         ]);
 
@@ -129,10 +132,9 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
           }
         });
 
-        // Parcelas futuras já comprometidas (ainda não viraram fatura) também consomem limite —
-        // ver explicação em CreditCards.jsx/calculateAvailableLimit.
+        const unbilledUsed = cardTxs.filter(tx => !tx.invoice_id).reduce((sum, tx) => sum + (tx.amount || 0), 0);
         const futureUsed = futureBills.reduce((sum, b) => sum + (b.amount || 0), 0);
-        const totalUsed = currentMonthUsed + futureUsed;
+        const totalUsed = currentMonthUsed + unbilledUsed + futureUsed;
         const availableLimit = card.limit - totalUsed;
 
         setSelectedCard(card);

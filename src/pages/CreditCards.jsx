@@ -38,23 +38,36 @@ export default function CreditCards() {
   // O limite usado precisa considerar não só a fatura atual, mas também as parcelas futuras já
   // comprometidas (uma compra parcelada em 10x reserva o valor das 10 parcelas do limite desde a
   // compra, não só a parcela do mês corrente — é assim que cartão de crédito real funciona).
-  // Essas parcelas futuras, antes de virarem uma fatura de verdade, existem como registros de
-  // Bill (categoria "credit_card", criados ao pagar a fatura anterior — ver CreditCardInvoices.jsx
-  // e InvoiceOCRDialog.jsx). Ao pagar uma fatura, ela sai da soma (não é mais "open"/"closed") e
-  // o limite disponível sobe só o valor daquela fatura — as parcelas futuras restantes continuam
-  // reservadas até vencerem, uma a uma.
-  const calculateAvailableLimit = (card, allInvoices, allBills) => {
+  // Essas parcelas futuras existem em duas formas diferentes dependendo de como a compra entrou
+  // no sistema, e a soma final precisa cobrir as duas sem contar nada duas vezes:
+  //   1. invoiceUsed  — faturas já geradas e ainda não pagas (open/closed): cobre tanto a
+  //      importação de fatura (InvoiceOCRDialog) quanto o botão "Gerar Fatura".
+  //   2. unbilledUsed — CreditCardTransaction sem invoice_id: parcelas lançadas manualmente em
+  //      "Nova Compra" que ainda não entraram em nenhuma fatura (bulkCreate cria todas as N
+  //      parcelas de uma vez, sem invoice_id — sem isso elas nunca contavam no limite).
+  //   3. futureUsed   — Bill pendente de categoria "credit_card": parcelas futuras da importação
+  //      de fatura que ainda nem existem como CreditCardTransaction (só nascem quando a fatura
+  //      daquele mês futuro for importada de verdade — ver InvoiceOCRDialog.jsx).
+  // Ao pagar/gerar uma fatura, ela sai do balde 1 e as transações saem do balde 2 (ganham
+  // invoice_id) — o limite disponível sobe só o valor daquela fatura, as parcelas futuras
+  // restantes continuam reservadas até vencerem, uma a uma.
+  const calculateAvailableLimit = (card, allInvoices, allBills, allCardTxs) => {
     let invoiceUsed = 0;
     allInvoices
       .filter(inv => inv.card_id === card.id && (inv.status === "open" || inv.status === "closed"))
       .forEach(inv => { invoiceUsed += inv.total_amount || 0; });
+
+    let unbilledUsed = 0;
+    allCardTxs
+      .filter(tx => tx.card_id === card.id && !tx.invoice_id)
+      .forEach(tx => { unbilledUsed += tx.amount || 0; });
 
     let futureUsed = 0;
     allBills
       .filter(b => b.card_id === card.id && b.category === "credit_card" && b.status === "pending")
       .forEach(b => { futureUsed += b.amount || 0; });
 
-    const totalUsed = invoiceUsed + futureUsed;
+    const totalUsed = invoiceUsed + unbilledUsed + futureUsed;
     const availableLimit = card.limit - totalUsed;
     return { ...card, availableLimit: availableLimit > 0 ? availableLimit : 0, usedLimit: totalUsed };
   };
@@ -62,12 +75,13 @@ export default function CreditCards() {
   const loadCards = async () => {
     try {
       const user = await base44.auth.me();
-      const [data, allInvoices, allBills] = await Promise.all([
+      const [data, allInvoices, allCardTxs, allBills] = await Promise.all([
         base44.entities.CreditCard.filter({ created_by: user.email }, "-created_date"),
         base44.entities.CreditCardInvoice.filter({ created_by: user.email }),
+        base44.entities.CreditCardTransaction.filter({ created_by: user.email }),
         base44.entities.Bill.filter({ created_by: user.email, type: "payable", category: "credit_card" }),
       ]);
-      const cardsWithBalances = data.map(card => calculateAvailableLimit(card, allInvoices, allBills));
+      const cardsWithBalances = data.map(card => calculateAvailableLimit(card, allInvoices, allBills, allCardTxs));
       setCards(data);
       setCardsWithBalance(cardsWithBalances);
     } catch (error) {
