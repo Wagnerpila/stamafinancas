@@ -49,7 +49,7 @@ export function statementImportPrompt({ expenseCategories, incomeCategories } = 
   const expenseBlock = expenseCategories?.length ? expenseCategories.map((c) => `- ${c}`).join('\n') : null;
   const incomeBlock = incomeCategories?.length ? incomeCategories.map((c) => `- ${c}`).join('\n') : null;
   const categoriesInstruction = (expenseBlock || incomeBlock)
-    ? `Escolha, para cada lançamento, o nome EXATO de uma das categorias abaixo (não traduza nem invente outra), com base na descrição do lançamento (nome do estabelecimento, tipo de PIX, etc.):
+    ? `Escolha, para cada lançamento, o nome EXATO de uma das categorias abaixo (não traduza nem invente outra), com base na descrição do lançamento (nome do estabelecimento, tipo de PIX, etc.). Muitos PIX e transferências não têm um estabelecimento claro na descrição — se genuinamente não der para identificar a categoria, use a categoria de "outras despesas"/"outras receitas" da lista (ou deixe null se não houver uma assim), em vez de chutar uma categoria específica errada:
 ${expenseBlock ? `Categorias de despesa:\n${expenseBlock}` : ''}${expenseBlock && incomeBlock ? '\n' : ''}${incomeBlock ? `Categorias de receita:\n${incomeBlock}` : ''}`
     : 'Para expense: food, transport, health, education, entertainment, shopping, bills, other_expense. Para income: salary, freelance, investment, other_income';
 

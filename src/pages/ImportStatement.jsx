@@ -68,12 +68,16 @@ export default function ImportStatement() {
       const rawTransactions = result?.status === "success" ? result.output?.transactions : null;
       if (rawTransactions?.length > 0) {
         // A IA foi instruída a usar o nome exato de uma categoria do usuário, mas casa aqui de
-        // forma case-insensitive por segurança; sem correspondência, deixa em branco para o
-        // usuário escolher na tela de revisão (evita salvar uma categoria fora da lista dele).
+        // forma case-insensitive por segurança. Lançamentos que a IA não conseguiu categorizar
+        // (comum em PIX sem descrição clara) caem na categoria "outras despesas/receitas" do
+        // usuário em vez de ficarem em branco — evita ter que categorizar cada um na revisão.
         const transactions = rawTransactions.map((t) => {
-          const list = t.type === "income" ? categories.income : categories.expense;
+          const type = t.type === "income" ? "income" : "expense";
+          const list = type === "income" ? categories.income : categories.expense;
           const matched = list.find((name) => name.toLowerCase() === String(t.category || "").toLowerCase());
-          return { ...t, category: matched || "" };
+          const fallback = list.find((name) => name.toLowerCase().includes("outr"))
+            || (type === "income" ? "Outras Receitas" : "Outras despesas");
+          return { ...t, category: matched || fallback };
         });
         navigate(createPageUrl("ReviewImportedTransactions"), { state: { transactions } });
       } else {
