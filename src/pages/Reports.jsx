@@ -27,7 +27,6 @@ const PAYMENT_METHOD_INFO = {
 export default function Reports() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
-  const [creditCardTxs, setCreditCardTxs] = useState([]);
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -37,13 +36,11 @@ export default function Reports() {
     const loadInitialData = async () => {
       try {
         const currentUser = await User.me();
-        const [data, ccData, cardData] = await Promise.all([
+        const [data, cardData] = await Promise.all([
           Transaction.filter({ created_by: currentUser.email }, "-date"),
-          base44.entities.CreditCardTransaction.filter({ created_by: currentUser.email }),
           base44.entities.CreditCard.filter({ created_by: currentUser.email }),
         ]);
         setTransactions(data);
-        setCreditCardTxs(ccData);
         setCards(cardData);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
@@ -63,26 +60,22 @@ export default function Reports() {
     });
   }, [transactions, selectedDate, yearMode]);
 
-  const filteredCreditCardTxs = useMemo(() => {
-    return creditCardTxs.filter(t => {
-      const raw = t.purchase_date || t.created_date;
-      const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
-      if (!d || isNaN(d)) return false;
-      if (yearMode) return d.getFullYear() === selectedDate.getFullYear();
-      return d.getMonth() === selectedDate.getMonth() && d.getFullYear() === selectedDate.getFullYear();
-    });
-  }, [creditCardTxs, selectedDate]);
-
-  // Agrupa as compras do mês por cartão — mesmo padrão de {groups, itemsByGroup} que o widget
-  // "Gastos por Categoria" do Dashboard usa, só que agrupando por cartão em vez de categoria.
+  // Agrupa por cartão o quanto foi pago de fatura dentro do mês — antes isso vinha das
+  // CreditCardTransaction filtradas pela data da COMPRA, então uma compra parcelada de janeiro
+  // nunca aparecia no relatório de fevereiro (mês em que a fatura foi de fato paga), e o card
+  // ficava "Nenhuma compra em cartão" mesmo com faturas pagas no período. Ao pagar uma fatura
+  // (CreditCardInvoices.jsx) o sistema já cria uma Transaction por item com payment_method
+  // "credit_card", credit_card_id do cartão e date = data do pagamento — é essa data (já usada
+  // pelo filteredTransactions acima) que reflete "quanto cada cartão gastou dentro do mês".
   const cardBreakdown = useMemo(() => {
     const totals = {};
     const items = {};
-    filteredCreditCardTxs.forEach(t => {
-      const key = t.card_id || "sem_cartao";
+    filteredTransactions.forEach(t => {
+      if (t.type !== "expense" || t.payment_method !== "credit_card" || !t.credit_card_id) return;
+      const key = t.credit_card_id;
       totals[key] = (totals[key] || 0) + Math.abs(t.amount || 0);
       if (!items[key]) items[key] = [];
-      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.purchase_date });
+      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.date });
     });
     Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
 
@@ -98,7 +91,7 @@ export default function Reports() {
     }).sort((a, b) => b.amount - a.amount);
 
     return { groups, itemsByGroup: items };
-  }, [filteredCreditCardTxs, cards]);
+  }, [filteredTransactions, cards]);
 
   // Agrupa as despesas do mês por forma de pagamento (campo já salvo em cada Transaction).
   const paymentMethodBreakdown = useMemo(() => {

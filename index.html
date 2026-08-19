@@ -9,7 +9,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#1e3a5f" />
-    <link rel="manifest" href="/manifest.json" />
+    <!-- O <link rel="manifest"> e o registro do service worker agora são injetados automaticamente
+         pelo vite-plugin-pwa (vite.config.js) — manter um <link> manual aqui além do gerado faz o
+         Chrome enxergar dois manifests e pode invalidar a instalação. -->
     <title>STAMA</title>
   </head>
   <body>
