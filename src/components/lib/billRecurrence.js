@@ -66,17 +66,39 @@ export function getPaidRecurringIdsForMonth(bills, referenceDate) {
   return ids;
 }
 
-// Expande a lista de bills para o mês selecionado: contas recorrentes originais já
-// pagas nesse mês são substituídas pela cópia paga; as demais aparecem como instância virtual.
+// IDs das contas recorrentes originais que já têm uma cópia própria (paga OU só editada) no mês
+// de referenceDate — a recorrência é só a relação entre os lançamentos, não um valor
+// compartilhado entre eles, então uma edição pontual (ver buildBillEditAction) cria uma cópia
+// vinculada igual à da "Marcar como paga", mas ainda pendente. A cópia tem: recurrence="none",
+// linked_bill_id=<id da original> e due_date dentro do mês de referência (status qualquer).
+export function getOverriddenRecurringIdsForMonth(bills, referenceDate) {
+  const monthKey = format(startOfMonth(referenceDate), "yyyy-MM");
+  const ids = new Set();
+  bills.forEach(bill => {
+    if (
+      (!bill.recurrence || bill.recurrence === "none") &&
+      bill.linked_bill_id &&
+      bill.due_date
+    ) {
+      const dueMth = format(startOfMonth(new Date(bill.due_date.slice(0, 10) + "T00:00:00")), "yyyy-MM");
+      if (dueMth === monthKey) ids.add(bill.linked_bill_id);
+    }
+  });
+  return ids;
+}
+
+// Expande a lista de bills para o mês selecionado: contas recorrentes originais que já têm uma
+// cópia própria nesse mês (paga ou só editada) são substituídas por ela; as demais aparecem
+// como instância virtual.
 export function getBillsForMonth(bills, selectedDate) {
-  const paidIds = getPaidRecurringIdsForMonth(bills, selectedDate);
+  const overriddenIds = getOverriddenRecurringIdsForMonth(bills, selectedDate);
   const result = [];
 
   bills.forEach(bill => {
     const isRecurringOriginal = bill.recurrence && bill.recurrence !== "none";
 
     if (isRecurringOriginal) {
-      if (paidIds.has(bill.id)) return;
+      if (overriddenIds.has(bill.id)) return;
       if (!billAppearsInMonth(bill, selectedDate)) return;
       result.push(buildVirtualBill(bill, selectedDate));
     } else {
@@ -86,6 +108,42 @@ export function getBillsForMonth(bills, selectedDate) {
   });
 
   return result;
+}
+
+// Campos editáveis de uma conta a pagar/receber pelo BillForm.
+const EDITABLE_BILL_FIELDS = [
+  "title", "description", "amount", "type", "category", "due_date",
+  "recurrence", "notes", "is_food_voucher", "card_id",
+];
+
+// Monta o payload de salvar uma conta editada e decide se é create ou update.
+//
+// Regra: uma recorrência representa só a relação entre os lançamentos, não um valor
+// compartilhado entre eles — cada ocorrência mensal tem seu próprio valor. Por isso, se a conta
+// sendo editada é uma instância virtual (gerada por getBillsForMonth a partir do template, ainda
+// sem cópia própria naquele mês), a edição cria uma cópia vinculada só para aquele mês — igual à
+// da "Marcar como paga" — em vez de alterar o template. Assim o valor (ou outro campo) mudado
+// vale só para a data que está sendo editada; os meses futuros continuam usando os dados
+// originais da recorrência. Editar uma cópia que já existe (ou uma conta avulsa) só atualiza ela
+// mesma, como sempre.
+export function buildBillEditAction(editingBill, formData) {
+  const fields = {};
+  for (const field of EDITABLE_BILL_FIELDS) {
+    if (formData[field] !== undefined) fields[field] = formData[field];
+  }
+
+  if (editingBill._virtual) {
+    return {
+      op: "create",
+      data: {
+        ...fields,
+        recurrence: "none",
+        status: editingBill.status || "pending",
+        linked_bill_id: editingBill._originalId,
+      },
+    };
+  }
+  return { op: "update", id: editingBill.id, data: fields };
 }
 
 // Retorna a data de vencimento "efetiva" da bill para hoje: para contas recorrentes
@@ -100,8 +158,8 @@ export function getEffectiveDueDateToday(bill, bills) {
     return bill.due_date ? bill.due_date.split("T")[0] : null;
   }
 
-  const paidIds = getPaidRecurringIdsForMonth(bills, today);
-  if (paidIds.has(bill.id)) return null;
+  const overriddenIds = getOverriddenRecurringIdsForMonth(bills, today);
+  if (overriddenIds.has(bill.id)) return null;
   if (!billAppearsInMonth(bill, today)) return null;
 
   return buildVirtualBill(bill, today).due_date;

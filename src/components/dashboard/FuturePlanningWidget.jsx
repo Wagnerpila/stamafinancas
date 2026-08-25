@@ -6,7 +6,7 @@ import { createPageUrl } from "@/utils";
 import { addMonths, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CreditCard, ChevronRight, Zap } from "lucide-react";
-import { billAppearsInMonth, getPaidRecurringIdsForMonth } from "../lib/billRecurrence";
+import { billAppearsInMonth, getOverriddenRecurringIdsForMonth } from "../lib/billRecurrence";
 
 function formatBRL(v) {
   return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -22,10 +22,11 @@ export default function FuturePlanningWidget({ bills = [] }) {
     return months.map(m => {
       const key = format(m, "yyyy-MM");
       const label = format(m, "MMM/yy", { locale: ptBR });
-      // IDs de contas recorrentes que já têm cópia paga neste mês específico — mesma lógica
-      // (e mesma fonte) usada em BillsToPay/BillsToReceive, evitando reimplementar aqui um
-      // cálculo de recorrência divergente que só cobria "monthly" e ignorava trimestral/anual.
-      const paidIds = getPaidRecurringIdsForMonth(bills, m);
+      // IDs de contas recorrentes que já têm cópia própria (paga ou só editada) neste mês
+      // específico — mesma lógica (e mesma fonte) usada em BillsToPay/BillsToReceive, evitando
+      // reimplementar aqui um cálculo de recorrência divergente que só cobria "monthly" e
+      // ignorava trimestral/anual.
+      const overriddenIds = getOverriddenRecurringIdsForMonth(bills, m);
 
       // Parcelas futuras de cartão
       const installmentBills = bills.filter(b => {
@@ -38,15 +39,25 @@ export default function FuturePlanningWidget({ bills = [] }) {
       });
       const ccTotal = installmentBills.reduce((s, b) => s + (b.amount || 0), 0);
 
-      // Contas recorrentes (mensal/trimestral/anual) que caem neste mês, excluindo as já pagas
+      // Contas recorrentes (mensal/trimestral/anual) que caem neste mês, excluindo as que já
+      // têm cópia própria nesse mês (a cópia, com o valor correto daquele mês, é somada abaixo)
       const recurringBills = bills.filter(b => {
         if (b.type !== "payable" || b.status === "paid") return false;
         if (!b.recurrence || b.recurrence === "none") return false;
-        if (paidIds.has(b.id)) return false; // já paga neste mês
+        if (overriddenIds.has(b.id)) return false;
         return billAppearsInMonth(b, m);
       });
-      const billTotal = recurringBills.reduce((s, b) => s + (b.amount || 0), 0);
+      const templateTotal = recurringBills.reduce((s, b) => s + (b.amount || 0), 0);
 
+      // Cópias vinculadas ainda pendentes neste mês (ex: valor editado pontualmente para essa
+      // ocorrência) — contam com o valor já corrigido; cópias pagas ficam de fora do total.
+      const overrideBills = bills.filter(b => {
+        if (b.type !== "payable" || b.status === "paid" || !b.linked_bill_id) return false;
+        return billAppearsInMonth(b, m);
+      });
+      const overrideTotal = overrideBills.reduce((s, b) => s + (b.amount || 0), 0);
+
+      const billTotal = templateTotal + overrideTotal;
       const total = ccTotal + billTotal;
       return { key, label, ccTotal, recurring: billTotal, total };
     });

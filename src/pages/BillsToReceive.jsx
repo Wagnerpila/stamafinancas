@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import BillForm from "../components/bills/BillForm.jsx";
 import BillsList from "../components/bills/BillsList";
 import MonthFilter from "../components/common/MonthFilter";
-import { getBillsForMonth, getPaidRecurringIdsForMonth, findMatchingTransaction } from "../components/lib/billRecurrence";
+import { getBillsForMonth, getPaidRecurringIdsForMonth, findMatchingTransaction, buildBillEditAction } from "../components/lib/billRecurrence";
 import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
 
 export default function BillsToReceive() {
@@ -77,7 +77,16 @@ export default function BillsToReceive() {
   const handleSubmit = async (formData) => {
     try {
       if (editingBill) {
-        await base44.entities.Bill.update(editingBill.id, { ...formData, type: "receivable" });
+        // Uma recorrência é só a relação entre os lançamentos, não um valor compartilhado entre
+        // eles: editar uma ocorrência ainda virtual (sem cópia própria neste mês) grava uma
+        // cópia vinculada só para esta data, sem tocar no template — os meses futuros continuam
+        // com os dados originais da recorrência. Ver buildBillEditAction.
+        const action = buildBillEditAction(editingBill, { ...formData, type: "receivable" });
+        if (action.op === "create") {
+          await base44.entities.Bill.create(action.data);
+        } else {
+          await base44.entities.Bill.update(action.id, action.data);
+        }
       } else {
         await base44.entities.Bill.create({ ...formData, type: "receivable", created_by: user?.email });
       }
@@ -90,9 +99,10 @@ export default function BillsToReceive() {
   };
 
   const handleEdit = (bill) => {
-    const originalId = bill._originalId || bill.id;
-    const original = bills.find(b => b.id === originalId);
-    setEditingBill(original || bill);
+    // Mantém a ocorrência tal como ela aparece na lista (com o vencimento e o valor daquele mês
+    // específico) em vez de resolver para o template original — o formulário deve editar a data
+    // que o usuário clicou, não a recorrência inteira.
+    setEditingBill(bill);
     setShowForm(true);
   };
 
