@@ -21,6 +21,8 @@ model User {
   monthly_budget       Float?
   food_voucher_balance Float?
   subscription_plan_name String @default("free") // "free" | "premium"
+  reset_token_hash     String? // hash SHA-256 do token de "esqueci minha senha" (nunca o token cru)
+  reset_token_expires  DateTime? // token só é aceito antes deste instante
   created_date         DateTime @default(now())
   updated_date         DateTime @updatedAt
 

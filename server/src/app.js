@@ -17,6 +17,11 @@ const PUBLIC_DIR = path.resolve(process.cwd(), 'public');
 export function createApp() {
   const app = express();
 
+  // Atrás do proxy reverso do EasyPanel (ou similar), req.protocol reportaria sempre "http" sem
+  // isso — usado pra montar o link de redefinição de senha (ver auth.routes.js) com https quando
+  // APP_URL não estiver definida.
+  app.set('trust proxy', 1);
+
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim());
