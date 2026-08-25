@@ -58,4 +58,7 @@ export const User = {
   // Admin-only
   list: () => api.get('/users'),
   update: (id, data) => api.patch(`/users/${id}`, data),
+  // Apaga todos os lançamentos financeiros do próprio admin autenticado (fase de desenvolvimento
+  // — "recomeçar do zero"). Mantém a conta, categorias e preferências de notificação.
+  wipeMyData: () => api.post('/users/me/wipe-data'),
 };

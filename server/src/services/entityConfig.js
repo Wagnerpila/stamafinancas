@@ -73,7 +73,10 @@ export const ENTITY_CONFIG = {
   Goal: { accessor: 'goal', ...defaultOwned },
   CategoryBudget: { accessor: 'categoryBudget', ...defaultOwned },
   SpendingSummary: { accessor: 'spendingSummary', ...defaultOwned },
-  AIConsultation: { accessor: 'aiConsultation', ...defaultOwned },
+  // Prisma gera o accessor a partir do nome do model preservando "AI" maiúsculo (aIConsultation,
+  // não aiConsultation) — com o nome errado aqui, req.model virava undefined e toda chamada a
+  // /api/entities/AIConsultation (histórico de consultoria de IA) quebrava com 500.
+  AIConsultation: { accessor: 'aIConsultation', ...defaultOwned },
   NotificationSettings: { accessor: 'notificationSettings', ...defaultOwned },
 
   // --- Community / social entities: cross-user visibility, custom rules ---
