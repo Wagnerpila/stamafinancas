@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
 import { readInvoiceOCR } from "@/functions/readInvoiceOCR";
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { EXPENSE_CATEGORIES } from "@/lib/categories";
 import { normalizeDesc } from "../lib/purchaseMatch";
 
@@ -85,6 +85,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
   // futuro (Bill) que uma fatura anterior já tinha gerado pra essa mesma parcela.
   const [existingTxs, setExistingTxs] = useState([]);
   const [existingCardBills, setExistingCardBills] = useState([]);
+  const [showSkipped, setShowSkipped] = useState(false);
   const fileRef = useRef();
 
   useEffect(() => {
@@ -181,14 +182,24 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
   const updateItem = (i, field, value) => setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it));
   const selectedItems = items.filter(it => it.selected);
 
+  // Parcelas já lançadas em mês anterior (isDuplicate) nem entram na lista de revisão — ficam "em
+  // segundo plano" só pra ajudar a reconhecer a continuação da compra (ver findExistingMatch),
+  // sem opção de seleção nenhuma. Assim não tem como o usuário reimportar uma por engano (nem
+  // pelo "Todos", nem clicando nela), que era a causa da duplicação de compromissos futuros.
+  const visibleItems = items
+    .map((it, idx) => ({ ...it, __idx: idx }))
+    .filter(it => !it.isDuplicate);
+  const skippedItems = items
+    .map((it, idx) => ({ ...it, __idx: idx }))
+    .filter(it => it.isDuplicate);
+
   const handleImport = async () => {
     if (!result || selectedItems.length === 0) return;
 
-    // Rede de segurança final antes de gravar: mesmo com o pré-filtro de duplicatas (isDuplicate)
-    // e o botão "Todos" já pulando essas parcelas, o usuário ainda pode selecionar uma manualmente
-    // (ex: reabriu o item pra corrigir a categoria e acabou marcando). Importar de novo uma
-    // parcela que já virou lançamento real duplicaria a compra inteira — a transação, a fatura e
-    // os compromissos futuros das parcelas seguintes.
+    // Rede de segurança: parcelas duplicadas nem aparecem na lista pra seleção (ver visibleItems/
+    // skippedItems abaixo), então isso não deveria disparar mais — mas se algum dado antigo ou uma
+    // mudança futura reintroduzir um jeito de selecionar uma mesmo assim, ainda avisa antes de
+    // duplicar a compra inteira (transação, fatura e compromissos futuros das parcelas seguintes).
     const duplicatesSelected = selectedItems.filter(it => it.isDuplicate);
     if (duplicatesSelected.length > 0) {
       const names = duplicatesSelected.map(it => `• ${it.description}${it.installment_info ? ` (${it.installment_info})` : ""}`).join("\n");
@@ -380,21 +391,19 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
                   Fatura {result.reference_month} · R$ {formatBRL(result.total_amount)}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {selectedItems.length} de {items.length} selecionados · R$ {formatBRL(selectedItems.reduce((s, it) => s + it.amount, 0))}
+                  {selectedItems.length} de {visibleItems.length} novos selecionados · R$ {formatBRL(selectedItems.reduce((s, it) => s + it.amount, 0))}
+                  {skippedItems.length > 0 && ` · ${skippedItems.length} já lançado${skippedItems.length > 1 ? "s" : ""} antes (ignorado${skippedItems.length > 1 ? "s" : ""})`}
                 </p>
               </div>
               <div className="flex gap-2">
-                {/* Marca só os itens novos — parcelas já lançadas em mês anterior (isDuplicate)
-                    ficam de fora mesmo aqui, senão "Todos" reintroduziria a duplicação que o
-                    pré-filtro (findExistingMatch) já tinha evitado. Uma duplicata específica ainda
-                    pode ser selecionada à mão, clicando nela (com aviso de confirmação ao importar). */}
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => setItems(prev => prev.map(it => ({ ...it, selected: !it.isDuplicate })))}>Todos os novos</Button>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setItems(prev => prev.map(it => ({ ...it, selected: !it.isDuplicate })))}>Todos</Button>
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => setItems(prev => prev.map(it => ({ ...it, selected: false })))}>Nenhum</Button>
               </div>
             </div>
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {items.map((it, i) => {
+              {visibleItems.map((it) => {
+                const i = it.__idx;
                 const parsed = parseInstallment(it.installment_info);
                 const remaining = parsed ? parsed.total - parsed.current : 0;
                 return (
@@ -414,11 +423,6 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
                           <span className="text-sm font-bold text-red-500 flex-shrink-0 whitespace-nowrap">R$ {formatBRL(it.amount)}</span>
                         </div>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {it.isDuplicate && (
-                            <Badge className="text-xs bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-300">
-                              Já lançada antes
-                            </Badge>
-                          )}
                           {it.installment_info && (
                             <Badge variant="outline" className="text-xs">{it.installment_info}</Badge>
                           )}
@@ -459,6 +463,33 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
                 );
               })}
             </div>
+
+            {skippedItems.length > 0 && (
+              <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-lg p-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowSkipped(v => !v)}
+                  className="w-full flex items-center justify-between font-medium hover:text-slate-700 dark:hover:text-slate-200"
+                >
+                  <span>
+                    {skippedItems.length} parcela{skippedItems.length > 1 ? "s" : ""} de mês(es) anterior(es) já lançada{skippedItems.length > 1 ? "s" : ""} — não entra{skippedItems.length > 1 ? "m" : ""} nesta importação
+                  </span>
+                  {showSkipped ? <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />}
+                </button>
+                {/* Só pra conferência — de propósito não tem checkbox nem clique aqui: essas
+                    parcelas já viraram lançamento real antes, então não há por que reimportar. */}
+                {showSkipped && (
+                  <ul className="mt-2 space-y-1 pl-1">
+                    {skippedItems.map(it => (
+                      <li key={it.__idx} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{it.description}{it.installment_info ? ` (${it.installment_info})` : ""}</span>
+                        <span className="flex-shrink-0">R$ {formatBRL(it.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-2 pt-2 border-t dark:border-slate-700">
               <Button variant="outline" onClick={reset} className="flex-1">Cancelar</Button>
