@@ -186,6 +186,22 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
 
   const handleImport = async () => {
     if (!result || selectedItems.length === 0) return;
+
+    // Rede de segurança final antes de gravar: mesmo com o pré-filtro de duplicatas (isDuplicate)
+    // e o botão "Todos" já pulando essas parcelas, o usuário ainda pode selecionar uma manualmente
+    // (ex: reabriu o item pra corrigir a categoria e acabou marcando). Importar de novo uma
+    // parcela que já virou lançamento real duplicaria a compra inteira — a transação, a fatura e
+    // os compromissos futuros das parcelas seguintes.
+    const duplicatesSelected = selectedItems.filter(it => it.isDuplicate);
+    if (duplicatesSelected.length > 0) {
+      const names = duplicatesSelected.map(it => `• ${it.description}${it.installment_info ? ` (${it.installment_info})` : ""}`).join("\n");
+      const proceed = window.confirm(
+        `${duplicatesSelected.length} ite${duplicatesSelected.length > 1 ? "ns" : "m"} selecionado${duplicatesSelected.length > 1 ? "s" : ""} já ${duplicatesSelected.length > 1 ? "foram lançados" : "foi lançado"} antes:\n\n${names}\n\n` +
+        `Importar de novo vai duplicar essa(s) parcela(s) (na transação, na fatura e nos compromissos futuros). Continuar mesmo assim?`
+      );
+      if (!proceed) return;
+    }
+
     setImporting(true);
     try {
       const today = new Date().toISOString().split("T")[0];
@@ -371,7 +387,11 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => setItems(prev => prev.map(it => ({ ...it, selected: true })))}>Todos</Button>
+                {/* Marca só os itens novos — parcelas já lançadas em mês anterior (isDuplicate)
+                    ficam de fora mesmo aqui, senão "Todos" reintroduziria a duplicação que o
+                    pré-filtro (findExistingMatch) já tinha evitado. Uma duplicata específica ainda
+                    pode ser selecionada à mão, clicando nela (com aviso de confirmação ao importar). */}
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setItems(prev => prev.map(it => ({ ...it, selected: !it.isDuplicate })))}>Todos os novos</Button>
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => setItems(prev => prev.map(it => ({ ...it, selected: false })))}>Nenhum</Button>
               </div>
             </div>
