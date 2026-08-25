@@ -94,18 +94,6 @@ export default function CreditCardInvoices() {
   // Usa a categoria como está (pode ser nome em português vindo do OCR)
   const safeCategory = (cat) => cat || "other_expense";
 
-  // Parseia "2/12", "PAR 03/06", "3 de 10" → { current, total }
-  const parseInstallment = (info) => {
-    if (!info) return null;
-    const s = String(info);
-    const match = s.match(/(\d+)\s*\/\s*(\d+)/) || s.match(/(\d+)\s+de\s+(\d+)/i);
-    if (!match) return null;
-    const current = parseInt(match[1]);
-    const total = parseInt(match[2]);
-    if (isNaN(current) || isNaN(total) || total <= 1 || current > total) return null;
-    return { current, total };
-  };
-
   const deleteInvoice = async (invoice) => {
     if (!confirm(`Excluir fatura ${invoice.reference_month} e todas as suas transações e compromissos futuros? Esta ação não pode ser desfeita.`)) return;
     setDeletingInvoice(true);
@@ -144,12 +132,13 @@ export default function CreditCardInvoices() {
     }
   };
 
-  // Ferramenta de manutenção: antes desta correção, pagar uma fatura recriava os compromissos
-  // futuros (parcelas) que a importação da própria fatura já tinha criado — sem checar se já
-  // existiam. Isso deixou dados duplicados em cartões que já foram usados dessa forma, inflando
-  // o "usado" no limite disponível. Agrupa os Bills deste cartão por título (que já contém a
-  // descrição + "Parcela N/Total", igual verificado ao criar) e apaga as cópias extras,
-  // mantendo a que já estiver paga (se houver) ou a mais antiga.
+  // Ferramenta de manutenção: pagar uma fatura já não recria mais os compromissos futuros das
+  // parcelas (isso só acontece uma vez, ao importar — ver payInvoice), mas cartões usados antes
+  // dessa correção podem ter ficado com compromissos duplicados (mesma parcela, título igual,
+  // vencimento diferente por poucos dias — vinha de duas checagens de "já existe" rodando com
+  // dados ligeiramente desatualizados uma da outra). Agrupa os Bills deste cartão por título (que
+  // já contém a descrição + "Parcela N/Total") e apaga as cópias extras, mantendo a que já
+  // estiver paga (se houver) ou a mais antiga.
   const cleanupDuplicateBills = async () => {
     if (!confirm("Procurar e remover compromissos futuros (parcelas) duplicados deste cartão?")) return;
     setCleaningDuplicates(true);
@@ -206,61 +195,13 @@ export default function CreditCardInvoices() {
           }));
           await base44.entities.Transaction.bulkCreate(transactionsToCreate);
 
-          // Compromissos futuros (Bill) que já existem pra este cartão — uma parcela pode já ter
-          // ganhado seu placeholder quando a PRÓPRIA fatura foi importada (InvoiceOCRDialog.jsx
-          // já cria essas parcelas restantes no momento do import). Sem checar isso aqui, pagar a
-          // fatura criava um SEGUNDO conjunto de placeholders pras mesmas parcelas futuras,
-          // dobrando o valor "comprometido" contado no limite disponível do cartão.
-          const existingCardBills = await base44.entities.Bill.filter({
-            card_id: cardId, category: "credit_card"
-          });
-
-          // Criar compromissos futuros para parcelas restantes
-          const billsToCreate = [];
-          for (const tx of invoiceTxs) {
-            // Usa campos diretos da entidade (salvos pelo OCR)
-            let current = tx.installment_number > 0 ? tx.installment_number : null;
-            let total = tx.installments > 1 ? tx.installments : null;
-
-            // Fallback: parsear das notes
-            if (!current || !total) {
-              const parsed = parseInstallment(tx.notes);
-              if (parsed) { current = parsed.current; total = parsed.total; }
-            }
-
-            if (!current || !total || total <= 1) continue;
-            const remaining = total - current;
-            if (remaining <= 0) continue;
-
-            // Ancora no vencimento da PRÓPRIA fatura sendo paga, não em "hoje" — senão pagar uma
-            // fatura atrasada desalinhava o cronograma das parcelas futuras restantes.
-            const dueAnchor = new Date(invoice.due_date.slice(0, 10) + "T00:00:00");
-            const descNorm = normalizeDesc(tx.description);
-            for (let offset = 1; offset <= remaining; offset++) {
-              const installmentNumber = current + offset;
-              const alreadyBilled = existingCardBills.some(b =>
-                normalizeDesc(b.title).startsWith(descNorm) && b.title.endsWith(`Parcela ${installmentNumber}/${total}`)
-              );
-              if (alreadyBilled) continue;
-
-              const futureDate = new Date(dueAnchor.getFullYear(), dueAnchor.getMonth() + offset, card.due_day || 10);
-              billsToCreate.push({
-                title: `${tx.description} — Parcela ${current + offset}/${total}`,
-                description: `Parcela ${current + offset} de ${total} · Cartão ${card.name}`,
-                amount: tx.amount,
-                type: "payable",
-                category: "credit_card",
-                due_date: futureDate.toISOString().split("T")[0],
-                status: "pending",
-                recurrence: "none",
-                linked_bill_id: invoice.id,  // rastreia a fatura de origem
-                card_id: cardId  // associa ao cartão correto
-              });
-            }
-          }
-          if (billsToCreate.length > 0) {
-            await base44.entities.Bill.bulkCreate(billsToCreate);
-          }
+          // Os compromissos futuros (Bill) das parcelas ainda não faturadas desta compra já foram
+          // criados quando a fatura ATUAL foi importada (InvoiceOCRDialog.jsx, ao lançar cada
+          // parcela) — não quando ela é paga. Pagar a fatura só marca ela como paga e lança as
+          // transações acima; recriar os compromissos futuros aqui de novo era redundante e,
+          // usando um cálculo de data ligeiramente diferente do da importação, acabava criando um
+          // SEGUNDO compromisso com o mesmo título e vencimento diferente em vez de reconhecer o
+          // que já existia — duplicando o valor "comprometido" no limite do cartão.
         } else {
           await base44.entities.Transaction.create({
             description: `Pagamento Fatura ${card.name} - ${invoice.reference_month}`,

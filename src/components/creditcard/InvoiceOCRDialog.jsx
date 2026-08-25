@@ -80,11 +80,10 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
   const [items, setItems] = useState([]);
   const [importing, setImporting] = useState(false);
   const [customCategories, setCustomCategories] = useState([]);
-  // Snapshot das transações/contas já existentes deste cartão no momento da análise — usado tanto
-  // pra marcar itens duplicados na lista quanto, na importação, pra não recriar um compromisso
-  // futuro (Bill) que uma fatura anterior já tinha gerado pra essa mesma parcela.
+  // Snapshot das transações já existentes deste cartão no momento da análise — usado pra marcar
+  // itens duplicados na lista (ver findExistingMatch). Os compromissos futuros (Bill) são
+  // rebuscados na hora de importar, não aqui — ver freshCardBills em handleImport.
   const [existingTxs, setExistingTxs] = useState([]);
-  const [existingCardBills, setExistingCardBills] = useState([]);
   const [showSkipped, setShowSkipped] = useState(false);
   const fileRef = useRef();
 
@@ -134,12 +133,8 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
       // Busca parcelas já lançadas neste cartão para ajudar o OCR a identificar continuações, e
       // também pra marcar na lista os itens que já foram importados antes (evita duplicar ao
       // importar faturas em sequência, mês a mês)
-      const [existing, existingBills] = await Promise.all([
-        base44.entities.CreditCardTransaction.filter({ card_id: card.id }),
-        base44.entities.Bill.filter({ card_id: card.id, category: "credit_card" }),
-      ]);
+      const existing = await base44.entities.CreditCardTransaction.filter({ card_id: card.id });
       setExistingTxs(existing || []);
-      setExistingCardBills(existingBills || []);
       const existing_installments = (existing || [])
         .filter(t => t.installments > 1)
         .map(t => ({ description: t.description, installment_number: t.installment_number, installments: t.installments }));
@@ -214,6 +209,15 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
     try {
       const today = new Date().toISOString().split("T")[0];
 
+      // Rebusca os compromissos futuros (Bill) agora, na hora de gravar — não usa o snapshot de
+      // existingCardBills carregado quando o arquivo foi analisado (algum tempo atrás, enquanto o
+      // usuário revisava a lista). Uma fatura importada nesse meio-tempo (noutra aba, ou pagando
+      // outra fatura deste cartão) já teria criado/removido placeholders que o snapshot antigo não
+      // via — e as checagens "1b"/"alreadyBilled" abaixo, comparando só o TÍTULO, acabavam sem
+      // reconhecer um compromisso que já existia e criando um segundo, com vencimento diferente
+      // pro mesmo "Parcela N/Total".
+      const freshCardBills = await base44.entities.Bill.filter({ card_id: card.id, category: "credit_card" });
+
       // 1. Criar CreditCardTransactions
       const created = [];
       for (const it of selectedItems) {
@@ -240,7 +244,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
       // mesmo valor duas vezes no limite disponível do cartão (ver CreditCards.jsx).
       const placeholdersToDelete = created
         .filter(({ parsed }) => parsed)
-        .map(({ it, parsed }) => existingCardBills.find(b =>
+        .map(({ it, parsed }) => freshCardBills.find(b =>
           b.status === "pending" &&
           normalizeDesc(b.title).startsWith(normalizeDesc(it.description)) &&
           b.title.endsWith(`Parcela ${parsed.current}/${parsed.total}`)
@@ -296,7 +300,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
           const alreadyRecorded = created.some(({ it: other, parsed: otherParsed }) =>
             otherParsed && normalizeDesc(other.description) === desc && otherParsed.current === installmentNumber && otherParsed.total === total
           );
-          const alreadyBilled = existingCardBills.some(b =>
+          const alreadyBilled = freshCardBills.some(b =>
             normalizeDesc(b.title).startsWith(desc) && b.title.endsWith(`Parcela ${installmentNumber}/${total}`)
           );
           if (alreadyRecorded || alreadyBilled) continue;
