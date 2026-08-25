@@ -17,16 +17,21 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// Ferramenta de fase de desenvolvimento: apaga TODOS os lançamentos financeiros do próprio admin
-// autenticado (transações, contas, cartões + faturas + lançamentos de cartão, crediários, metas,
-// orçamentos por categoria, resumos e consultorias de IA), pra recomeçar do zero — sem apagar a
-// conta em si, as categorias personalizadas nem as preferências de notificação. Escopado sempre a
-// req.user.id (nunca a um :id da URL) — é "apagar os MEUS dados", não uma ferramenta pra um admin
-// apagar dados de outro usuário. Roda tudo numa única transação do Prisma: ou apaga tudo, ou nada
-// (se algo falhar no meio, não fica um estado parcialmente zerado).
-router.post('/me/wipe-data', async (req, res, next) => {
+// Ferramenta de fase de desenvolvimento: apaga TODOS os lançamentos financeiros de um usuário
+// escolhido pelo admin (transações, contas, cartões + faturas + lançamentos de cartão,
+// crediários, metas, orçamentos por categoria, resumos e consultorias de IA), pra recomeçar do
+// zero — sem apagar a conta em si, as categorias personalizadas nem as preferências de
+// notificação. :id vem da URL (pode ser o próprio admin ou qualquer outro usuário — a seleção de
+// quem é responsabilidade do front, ver WipeUserDataPanel.jsx). Roda tudo numa única transação do
+// Prisma: ou apaga tudo, ou nada (se algo falhar no meio, não fica um estado parcialmente zerado).
+router.post('/:id/wipe-data', async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.params.id;
+    const target = await prisma.user.findUnique({ where: { id: userId } });
+    if (!target) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
     const results = await prisma.$transaction([
       prisma.creditCardTransaction.deleteMany({ where: { user_id: userId } }),
       prisma.creditCardInvoice.deleteMany({ where: { user_id: userId } }),

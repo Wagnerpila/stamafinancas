@@ -8,7 +8,7 @@ import { ShieldCheck, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import WhatsAppBotPanel from '@/components/admin/WhatsAppBotPanel';
-import WipeMyDataButton from '@/components/admin/WipeMyDataButton';
+import WipeUserDataPanel from '@/components/admin/WipeUserDataPanel';
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
       </Card>
 
       <div className="mt-8">
-        <WipeMyDataButton />
+        <WipeUserDataPanel users={users} currentUser={currentUser} />
       </div>
     </div>
   );
