@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import { readInvoiceOCR } from "@/functions/readInvoiceOCR";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { EXPENSE_CATEGORIES } from "@/lib/categories";
+import { normalizeDesc } from "../lib/purchaseMatch";
 
 // Normaliza a data de um lançamento extraído pela IA pra "YYYY-MM-DD". Faturas brasileiras
 // imprimem a data como DD/MM (sem ano); a IA às vezes repassa isso literalmente em vez de
@@ -50,10 +51,6 @@ function parseInstallment(info) {
   const total = parseInt(match[2]);
   if (isNaN(current) || isNaN(total) || total <= 1 || current > total) return null;
   return { current, total };
-}
-
-function normalizeDesc(s) {
-  return String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 // Verifica se um lançamento extraído pela IA já foi importado antes (ex: a fatura deste mês

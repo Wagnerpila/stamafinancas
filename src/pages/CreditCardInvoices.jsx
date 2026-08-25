@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { normalizeDesc } from "../components/lib/purchaseMatch";
 
 const statusLabels = {
   open: { label: "Aberta", color: "bg-blue-100 text-blue-800", icon: Clock },
@@ -92,10 +93,6 @@ export default function CreditCardInvoices() {
 
   // Usa a categoria como está (pode ser nome em português vindo do OCR)
   const safeCategory = (cat) => cat || "other_expense";
-
-  function normalizeDesc(s) {
-    return String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
-  }
 
   // Parseia "2/12", "PAR 03/06", "3 de 10" → { current, total }
   const parseInstallment = (info) => {
