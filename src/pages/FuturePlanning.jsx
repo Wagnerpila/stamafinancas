@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import {
   AlertTriangle, CreditCard, TrendingDown, Calendar, ArrowLeft,
-  DollarSign, Zap, LayoutList, CalendarRange
+  DollarSign, Zap, LayoutList, CalendarRange, MessageSquare
 } from "lucide-react";
 import { addMonths, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -323,7 +323,7 @@ export default function FuturePlanning() {
                         </div>
                         {monthlyRecurringBills.map(b => (
                           <div key={b.id} className="flex justify-between pl-3 text-slate-400 dark:text-slate-500">
-                            <span>• {b.title}</span>
+                            <span>• {b.title}{b.notes ? ` — ${b.notes}` : ""}</span>
                             <span>R$ {formatBRL(b.amount)}</span>
                           </div>
                         ))}
@@ -412,6 +412,11 @@ export default function FuturePlanning() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         Vence em {format(dueDate, "dd/MM/yyyy")} • {daysLeft} dias
                       </p>
+                      {bill.notes && (
+                        <p className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic mt-0.5">
+                          <MessageSquare className="w-3 h-3 shrink-0" /> {bill.notes}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-red-600 dark:text-red-400 text-sm">R$ {formatBRL(bill.amount)}</span>

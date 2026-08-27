@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function formatBRL(v) {
@@ -82,7 +82,14 @@ export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGr
                       <div className="space-y-1.5 max-h-64 overflow-y-auto">
                         {items.map(item => (
                           <div key={item.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                            <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
+                            <div className="min-w-0">
+                              <span className="text-sm text-slate-700 dark:text-slate-200 truncate block">{item.description}</span>
+                              {item.notes && (
+                                <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic truncate">
+                                  <MessageSquare className="w-3 h-3 shrink-0" /> {item.notes}
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
                               <span className={`text-sm font-medium ${amountColorClass}`}>R$ {formatBRL(item.amount)}</span>

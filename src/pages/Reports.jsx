@@ -124,7 +124,7 @@ export default function Reports() {
       const key = t.payment_method || "cash";
       totals[key] = (totals[key] || 0) + Math.abs(t.amount || 0);
       if (!items[key]) items[key] = [];
-      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.date });
+      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.date, notes: t.notes });
     });
     Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
 

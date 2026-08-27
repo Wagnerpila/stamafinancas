@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ChevronRight, ChevronDown, Tag, Receipt, CreditCard, Pencil } from "lucide-react";
+import { ChevronRight, ChevronDown, Tag, Receipt, CreditCard, Pencil, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
@@ -106,7 +106,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
       if (!d || isNaN(d) || !matchesPeriod(d)) return;
       const key = resolveCategoryName(t.category, dbCategories);
-      addItem(key, { id: `t-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.date, category: key, source: "transaction" });
+      addItem(key, { id: `t-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.date, category: key, source: "transaction", notes: t.notes });
     });
 
     // Transações de cartão: sempre contabilizar pela data da compra
@@ -115,7 +115,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
       if (!d || isNaN(d) || !matchesPeriod(d)) return;
       const key = resolveCategoryName(t.category, dbCategories);
-      addItem(key, { id: `cc-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.purchase_date, category: key, source: "creditcard" });
+      addItem(key, { id: `cc-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.purchase_date, category: key, source: "creditcard", notes: t.notes });
     });
 
     Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
@@ -260,7 +260,14 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
                                   ? <CreditCard className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                   : <Receipt className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                 }
-                                <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{item.description}</span>
+                                <div className="min-w-0">
+                                  <span className="text-sm text-slate-700 dark:text-slate-200 truncate block">{item.description}</span>
+                                  {item.notes && (
+                                    <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic truncate">
+                                      <MessageSquare className="w-3 h-3 shrink-0" /> {item.notes}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <span className="text-xs text-slate-400">{formatDateBR(item.date)}</span>
