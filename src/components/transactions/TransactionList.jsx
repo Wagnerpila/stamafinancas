@@ -24,9 +24,15 @@ const categoryStyles = {
   other_expense: "bg-slate-100 text-slate-800",
 };
 
-export default function TransactionList({ transactions, onEdit, onDelete, onDeleteMany }) {
+export default function TransactionList({ transactions, onEdit, onDelete, onDeleteMany, getPurchaseNote }) {
   const [selected, setSelected] = useState([]);
   const [deleting, setDeleting] = useState(false);
+
+  // Compra de cartão faturada e paga carrega credit_card_id — o comentário de identificação dela
+  // (ex: "Sofá") mora em PurchaseNote (card_id + descrição), não no campo notes; cai pro notes
+  // normal (editado via EditTransactionDialog) pra transações sem cartão.
+  const resolveNotes = (t) =>
+    (t.credit_card_id && getPurchaseNote?.(t.credit_card_id, t.description)) || t.notes;
 
   const toggleSelect = (id) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -85,9 +91,9 @@ export default function TransactionList({ transactions, onEdit, onDelete, onDele
             <Badge className={`mt-1 ${categoryStyles[transaction.category] || categoryStyles.other_expense}`}>
               {transaction.category}
             </Badge>
-            {transaction.notes && (
+            {resolveNotes(transaction) && (
               <p className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic mt-1">
-                <MessageSquare className="w-3 h-3 shrink-0" /> {transaction.notes}
+                <MessageSquare className="w-3 h-3 shrink-0" /> {resolveNotes(transaction)}
               </p>
             )}
           </div>
@@ -206,9 +212,9 @@ export default function TransactionList({ transactions, onEdit, onDelete, onDele
                   </td>
                   <td className="p-4 font-medium text-slate-800 dark:text-slate-200">
                     {transaction.description}
-                    {transaction.notes && (
+                    {resolveNotes(transaction) && (
                       <p className="flex items-center gap-1 text-xs font-normal text-slate-400 dark:text-slate-500 italic mt-0.5">
-                        <MessageSquare className="w-3 h-3 shrink-0" /> {transaction.notes}
+                        <MessageSquare className="w-3 h-3 shrink-0" /> {resolveNotes(transaction)}
                       </p>
                     )}
                   </td>

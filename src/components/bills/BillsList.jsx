@@ -14,7 +14,13 @@ const statusConfig = {
   overdue: { label: "Atrasada", color: "bg-red-100 text-red-800", icon: Clock },
 };
 
-export default function BillsList({ bills, onEdit, onDelete, onMarkAsPaid, type }) {
+export default function BillsList({ bills, onEdit, onDelete, onMarkAsPaid, type, getPurchaseNote }) {
+  // Placeholder de parcela futura de cartão (category="credit_card") — o comentário de
+  // identificação (ex: "Sofá") mora em PurchaseNote (card_id + título), não no campo notes; cai
+  // pro notes normal (auto-gerado, ex: "Conta com vencimento em...") pras demais contas.
+  const resolveNotes = (bill) =>
+    (bill.category === "credit_card" && bill.card_id && getPurchaseNote?.(bill.card_id, bill.title)) || bill.notes;
+
   if (bills.length === 0) {
     return (
       <div className="text-center py-16 text-slate-500">
@@ -37,9 +43,9 @@ export default function BillsList({ bills, onEdit, onDelete, onMarkAsPaid, type 
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Vence em: {format(parseISO(bill.due_date), "dd/MM/yyyy", { locale: ptBR })}
               </p>
-              {bill.notes && (
+              {resolveNotes(bill) && (
                 <p className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic mt-1">
-                  <MessageSquare className="w-3 h-3 shrink-0" /> {bill.notes}
+                  <MessageSquare className="w-3 h-3 shrink-0" /> {resolveNotes(bill)}
                 </p>
               )}
             </div>
@@ -117,9 +123,9 @@ export default function BillsList({ bills, onEdit, onDelete, onMarkAsPaid, type 
                   <tr key={bill._virtual ? `${bill.id}-${bill.due_date}` : bill.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
                     <td className="p-4 font-medium text-slate-800 dark:text-slate-200">
                       {bill.title}
-                      {bill.notes && (
+                      {resolveNotes(bill) && (
                         <p className="flex items-center gap-1 text-xs font-normal text-slate-400 dark:text-slate-500 italic mt-0.5">
-                          <MessageSquare className="w-3 h-3 shrink-0" /> {bill.notes}
+                          <MessageSquare className="w-3 h-3 shrink-0" /> {resolveNotes(bill)}
                         </p>
                       )}
                     </td>

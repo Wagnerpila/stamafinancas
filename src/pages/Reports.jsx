@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import TransactionChart from "../components/dashboard/TransactionChart";
 import MonthFilter from "../components/common/MonthFilter";
 import SpendingBreakdownWidget from "../components/common/SpendingBreakdownWidget";
+import usePurchaseNotes from "../hooks/usePurchaseNotes";
 
 // Mesma paleta (em hex) usada nos gradientes da tela de Cartões — mantém a cor de cada cartão
 // consistente entre as duas telas.
@@ -32,6 +33,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [yearMode, setYearMode] = useState(false);
+  const purchaseNotes = usePurchaseNotes();
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -124,7 +126,8 @@ export default function Reports() {
       const key = t.payment_method || "cash";
       totals[key] = (totals[key] || 0) + Math.abs(t.amount || 0);
       if (!items[key]) items[key] = [];
-      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.date, notes: t.notes });
+      const notes = (t.credit_card_id && purchaseNotes.getNote(t.credit_card_id, t.description)) || t.notes;
+      items[key].push({ id: t.id, description: t.description, amount: t.amount, date: t.date, notes });
     });
     Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
 
@@ -134,7 +137,7 @@ export default function Reports() {
     }).sort((a, b) => b.amount - a.amount);
 
     return { groups, itemsByGroup: items };
-  }, [filteredTransactions]);
+  }, [filteredTransactions, purchaseNotes.getNote]);
 
   const monthlyStats = useMemo(() => {
     const stats = {};

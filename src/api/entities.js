@@ -7,6 +7,7 @@ export const CreditCard = createEntityClient('CreditCard');
 export const CreditCardInvoice = createEntityClient('CreditCardInvoice');
 export const CreditCardTransaction = createEntityClient('CreditCardTransaction');
 export const Bill = createEntityClient('Bill');
+export const PurchaseNote = createEntityClient('PurchaseNote');
 export const Crediario = createEntityClient('Crediario');
 export const Goal = createEntityClient('Goal');
 export const CategoryBudget = createEntityClient('CategoryBudget');

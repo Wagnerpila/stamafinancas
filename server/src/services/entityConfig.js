@@ -68,6 +68,7 @@ export const ENTITY_CONFIG = {
   CreditCard: { accessor: 'creditCard', ...defaultOwned },
   CreditCardInvoice: { accessor: 'creditCardInvoice', ...defaultOwned },
   CreditCardTransaction: { accessor: 'creditCardTransaction', ...defaultOwned },
+  PurchaseNote: { accessor: 'purchaseNote', ...defaultOwned },
   Bill: { accessor: 'bill', ...defaultOwned },
   Crediario: { accessor: 'crediario', ...defaultOwned },
   Goal: { accessor: 'goal', ...defaultOwned },

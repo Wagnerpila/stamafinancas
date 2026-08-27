@@ -10,6 +10,7 @@ import BillsList from "../components/bills/BillsList";
 import MonthFilter from "../components/common/MonthFilter";
 import { getBillsForMonth, getPaidRecurringIdsForMonth, findMatchingTransaction, buildBillEditAction } from "../components/lib/billRecurrence";
 import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
+import usePurchaseNotes from "../hooks/usePurchaseNotes";
 
 export default function BillsToPay() {
   const [bills, setBills] = useState([]);
@@ -24,6 +25,7 @@ export default function BillsToPay() {
   // mobile, onde o app não dá feedback imediato de "carregando") dispare handleMarkAsPaid duas
   // vezes antes da primeira chamada terminar e recarregar a lista, duplicando a transação.
   const payingRef = useRef(new Set());
+  const purchaseNotes = usePurchaseNotes();
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -364,6 +366,7 @@ export default function BillsToPay() {
         onDelete={handleDelete}
         onMarkAsPaid={handleMarkAsPaid}
         type="payable"
+        getPurchaseNote={purchaseNotes.getNote}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -10,12 +11,13 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
 } from "recharts";
 import {
-  AlertTriangle, CreditCard, TrendingDown, Calendar, ArrowLeft,
+  AlertTriangle, CreditCard, TrendingDown, ArrowLeft,
   DollarSign, Zap, LayoutList, CalendarRange, MessageSquare
 } from "lucide-react";
 import { addMonths, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
+import usePurchaseNotes from "../hooks/usePurchaseNotes";
 
 const MONTHS_AHEAD = 6;
 const MONTHS_MAX = 36; // máximo de meses a considerar para "todos"
@@ -39,6 +41,7 @@ export default function FuturePlanning() {
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [incomeByMonth, setIncomeByMonth] = useState({});
   const [showAllMonths, setShowAllMonths] = useState(false);
+  const purchaseNotes = usePurchaseNotes();
 
   const load = async () => {
     try {
@@ -190,6 +193,44 @@ export default function FuturePlanning() {
     return map;
   }, [bills, months]);
 
+  // Mesmos filtros de installmentsByMonth/recurringBillsByMonth acima, mas guardando a lista de
+  // Bills em vez de só a soma — usado no pop-up de detalhes do mês (ver selectedMonthKey).
+  const itemsByMonth = useMemo(() => {
+    const map = {};
+    months.forEach(m => { map[getMonthKey(m)] = { installments: [], recurring: [] }; });
+
+    bills.forEach(b => {
+      if (b.type !== "payable" || b.status === "paid" || b.category !== "credit_card") return;
+      if (!b.due_date) return;
+      try {
+        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
+        if (isNaN(d)) return;
+        const key = format(startOfMonth(d), "yyyy-MM");
+        if (map[key]) map[key].installments.push(b);
+      } catch { /* skip */ }
+    });
+
+    const paidByMonth = {};
+    bills.forEach(b => {
+      if (b.status === "paid" && (!b.recurrence || b.recurrence === "none") && b.linked_bill_id && b.due_date) {
+        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
+        if (!isNaN(d)) {
+          const key = format(startOfMonth(d), "yyyy-MM");
+          if (!paidByMonth[key]) paidByMonth[key] = new Set();
+          paidByMonth[key].add(b.linked_bill_id);
+        }
+      }
+    });
+    const monthlyBills = bills.filter(b => b.type === "payable" && b.recurrence === "monthly" && b.status !== "paid");
+    months.forEach(m => {
+      const key = getMonthKey(m);
+      const paidIds = paidByMonth[key] || new Set();
+      monthlyBills.forEach(b => { if (!paidIds.has(b.id)) map[key].recurring.push(b); });
+    });
+
+    return map;
+  }, [bills, months]);
+
   // Para cada mês: usa a receita real daquele mês se existir, senão usa a do mês atual como referência
   const getBudgetForMonth = (monthKey) => {
     if (incomeByMonth[monthKey] && incomeByMonth[monthKey] > 0) return incomeByMonth[monthKey];
@@ -214,47 +255,10 @@ export default function FuturePlanning() {
     });
   }, [months, installmentsByMonth, recurringBillsByMonth, incomeByMonth, monthlyIncome, showAllMonths]);
 
-  // IDs de recorrentes já pagos no mês atual (cópia paga gerada)
-  const paidRecurringIdsCurrentMonth = useMemo(() => {
-    const currentKey = format(startOfMonth(new Date()), "yyyy-MM");
-    const ids = new Set();
-    bills.forEach(b => {
-      if (b.status === "paid" && (!b.recurrence || b.recurrence === "none") && b.linked_bill_id && b.due_date) {
-        const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
-        if (!isNaN(d) && format(startOfMonth(d), "yyyy-MM") === currentKey) {
-          ids.add(b.linked_bill_id);
-        }
-      }
-    });
-    return ids;
-  }, [bills]);
-
-  // Monthly recurring bills list (for detail display) - exclui os já pagos no mês atual
-  const monthlyRecurringBills = useMemo(() =>
-    bills.filter(b =>
-      b.type === "payable" &&
-      b.recurrence === "monthly" &&
-      b.status !== "paid" &&
-      !paidRecurringIdsCurrentMonth.has(b.id)
-    ),
-    [bills, paidRecurringIdsCurrentMonth]
-  );
-
-  // Pending bills for next 3 months
-  const upcomingBills = useMemo(() => {
-    const now = new Date();
-    const end = addMonths(now, 3);
-    return bills
-      .filter(b => {
-        if (!b.due_date || b.status === "paid") return false;
-        try {
-          const d = new Date(b.due_date.slice(0, 10) + "T00:00:00");
-          if (isNaN(d)) return false;
-          return d >= now && d <= end;
-        } catch { return false; }
-      })
-      .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
-  }, [bills]);
+  // Mês cujo card foi clicado (abre o pop-up de detalhes) — ver itemsByMonth acima.
+  const [selectedMonthKey, setSelectedMonthKey] = useState(null);
+  const selectedMonth = chartData.find(d => d.key === selectedMonthKey);
+  const selectedItems = selectedMonthKey ? itemsByMonth[selectedMonthKey] : null;
 
   if (loading) {
     return (
@@ -297,13 +301,22 @@ export default function FuturePlanning() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {chartData.slice(0, showAllMonths ? chartData.length : 3).map((d, i) => {
+      {/* Summary cards — rolagem horizontal, clique abre o detalhamento do mês */}
+      <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 mb-8 -mx-4 px-4 md:mx-0 md:px-0">
+        {chartData.map((d, i) => {
           const isCritical = d.budget > 0 && d.total > 0 && (d.total / d.budget) >= 0.7;
           return (
-            <motion.div key={d.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-              <Card className={`border-0 shadow-lg ${isCritical ? "border-l-4 border-red-500" : "border-l-4 border-blue-500"}`}>
+            <motion.div
+              key={d.key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i, 10) * 0.05 }}
+              className="shrink-0 w-64 snap-start"
+            >
+              <Card
+                onClick={() => setSelectedMonthKey(d.key)}
+                className={`border-0 shadow-lg cursor-pointer hover:shadow-xl transition-shadow ${isCritical ? "border-l-4 border-red-500" : "border-l-4 border-blue-500"}`}
+              >
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase">{d.month}</span>
@@ -315,27 +328,14 @@ export default function FuturePlanning() {
                       <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" /> Parcelas CC</span>
                       <span>R$ {formatBRL(d.installments)}</span>
                     </div>
-                    {d.recurring > 0 && (
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> Contas mensais recorrentes</span>
-                          <span>R$ {formatBRL(d.recurring)}</span>
-                        </div>
-                        {monthlyRecurringBills.map(b => (
-                          <div key={b.id} className="flex justify-between pl-3 text-slate-400 dark:text-slate-500">
-                            <span>• {b.title}{b.notes ? ` — ${b.notes}` : ""}</span>
-                            <span>R$ {formatBRL(b.amount)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {d.recurring === 0 && (
-                      <div className="flex justify-between">
-                        <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> Contas mensais recorrentes</span>
-                        <span>R$ 0,00</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between">
+                      <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> Contas mensais recorrentes</span>
+                      <span>R$ {formatBRL(d.recurring)}</span>
+                    </div>
                   </div>
+                  {d.total > 0 && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">Ver detalhes do mês →</p>
+                  )}
                   {d.budget > 0 && (
                     <div className="mt-3">
                       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
@@ -390,45 +390,68 @@ export default function FuturePlanning() {
         </CardContent>
       </Card>
 
-      {/* Upcoming bills */}
-      {upcomingBills.length > 0 && (
-        <Card className="border-0 shadow-lg mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 dark:text-white">
-              <Calendar className="w-5 h-5 text-orange-500" />
-              Contas a Vencer nos Próximos 90 Dias
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {upcomingBills.map(bill => {
-                const dueDate = new Date(bill.due_date.slice(0, 10) + "T00:00:00");
-                const daysLeft = Math.ceil((dueDate - new Date()) / (1000 * 60 * 60 * 24));
-                const isUrgent = daysLeft <= 7;
-                return (
-                  <div key={bill.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-900 dark:text-white text-sm">{bill.title}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Vence em {format(dueDate, "dd/MM/yyyy")} • {daysLeft} dias
-                      </p>
-                      {bill.notes && (
-                        <p className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic mt-0.5">
-                          <MessageSquare className="w-3 h-3 shrink-0" /> {bill.notes}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-red-600 dark:text-red-400 text-sm">R$ {formatBRL(bill.amount)}</span>
-                      {isUrgent && <AlertTriangle className="w-4 h-4 text-orange-500" />}
-                    </div>
+      {/* Pop-up de detalhes do mês (clique num card acima) */}
+      <Dialog open={!!selectedMonthKey} onOpenChange={(open) => { if (!open) setSelectedMonthKey(null); }}>
+        <DialogContent className="max-w-lg max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedMonth?.month} — R$ {formatBRL(selectedMonth?.total || 0)}</DialogTitle>
+          </DialogHeader>
+          {selectedItems && (
+            <div className="space-y-5">
+              {selectedItems.installments.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5" /> Parcelas de Cartão
+                  </p>
+                  <div className="space-y-2">
+                    {selectedItems.installments.map(b => {
+                      const note = b.card_id ? purchaseNotes.getNote(b.card_id, b.title) : "";
+                      return (
+                        <div key={b.id} className="flex items-center justify-between gap-3 p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{b.title}</p>
+                            {note && (
+                              <p className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic">
+                                <MessageSquare className="w-3 h-3 shrink-0" /> {note}
+                              </p>
+                            )}
+                          </div>
+                          <span className="text-sm font-bold text-red-600 dark:text-red-400 shrink-0">R$ {formatBRL(b.amount)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              )}
+              {selectedItems.recurring.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5" /> Contas Recorrentes
+                  </p>
+                  <div className="space-y-2">
+                    {selectedItems.recurring.map(b => (
+                      <div key={b.id} className="flex items-center justify-between gap-3 p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{b.title}</p>
+                          {b.notes && (
+                            <p className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic">
+                              <MessageSquare className="w-3 h-3 shrink-0" /> {b.notes}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-red-600 dark:text-red-400 shrink-0">R$ {formatBRL(b.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedItems.installments.length === 0 && selectedItems.recurring.length === 0 && (
+                <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">Nenhum lançamento neste mês.</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Alert */}
       {chartData[0]?.budget > 0 && chartData[0]?.total > 0 && (chartData[0].total / chartData[0].budget) >= 0.7 && (

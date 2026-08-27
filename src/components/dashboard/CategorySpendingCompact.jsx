@@ -5,6 +5,7 @@ import { ChevronRight, ChevronDown, Tag, Receipt, CreditCard, Pencil, MessageSqu
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
+import usePurchaseNotes from "../../hooks/usePurchaseNotes";
 
 function formatBRL(v) {
   return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -54,6 +55,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
   const [savingItemId, setSavingItemId] = useState(null);
+  const purchaseNotes = usePurchaseNotes();
 
   // Fecha a lista expandida ao trocar de mês — senão fica mostrando lançamentos de um mês que
   // não é mais o selecionado.
@@ -106,7 +108,11 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
       if (!d || isNaN(d) || !matchesPeriod(d)) return;
       const key = resolveCategoryName(t.category, dbCategories);
-      addItem(key, { id: `t-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.date, category: key, source: "transaction", notes: t.notes });
+      // Compra de cartão faturada e paga (payInvoice) carrega credit_card_id — o comentário de
+      // identificação dela mora em PurchaseNote (card_id + descrição), não em t.notes; cai pro
+      // t.notes normal (editado via EditTransactionDialog) quando não é ligada a cartão nenhum.
+      const notes = (t.credit_card_id && purchaseNotes.getNote(t.credit_card_id, t.description)) || t.notes;
+      addItem(key, { id: `t-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.date, category: key, source: "transaction", notes });
     });
 
     // Transações de cartão: sempre contabilizar pela data da compra
@@ -115,13 +121,14 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
       if (!d || isNaN(d) || !matchesPeriod(d)) return;
       const key = resolveCategoryName(t.category, dbCategories);
-      addItem(key, { id: `cc-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.purchase_date, category: key, source: "creditcard", notes: t.notes });
+      const notes = purchaseNotes.getNote(t.card_id, t.description) || t.notes;
+      addItem(key, { id: `cc-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.purchase_date, category: key, source: "creditcard", notes });
     });
 
     Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
 
     return { spending: totals, itemsByCategory: items };
-  }, [transactions, creditCardTxs, selectedDate, yearMode, dbCategories]);
+  }, [transactions, creditCardTxs, selectedDate, yearMode, dbCategories, purchaseNotes.getNote]);
 
   const totalSpent = Object.values(spending).reduce((s, v) => s + v, 0);
 

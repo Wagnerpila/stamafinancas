@@ -7,7 +7,8 @@ import { base44 } from "@/api/base44Client";
 import { readInvoiceOCR } from "@/functions/readInvoiceOCR";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { EXPENSE_CATEGORIES } from "@/lib/categories";
-import { normalizeDesc, getInstallmentGroupKey } from "../lib/purchaseMatch";
+import { normalizeDesc } from "../lib/purchaseMatch";
+import usePurchaseNotes from "../../hooks/usePurchaseNotes";
 
 // Normaliza a data de um lançamento extraído pela IA pra "YYYY-MM-DD". Faturas brasileiras
 // imprimem a data como DD/MM (sem ano); a IA às vezes repassa isso literalmente em vez de
@@ -86,6 +87,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
   const [existingTxs, setExistingTxs] = useState([]);
   const [showSkipped, setShowSkipped] = useState(false);
   const fileRef = useRef();
+  const purchaseNotes = usePurchaseNotes();
 
   useEffect(() => {
     if (open) {
@@ -161,7 +163,11 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
             ...t,
             selected: !isDuplicate, // parcela/compra já lançada antes: começa desmarcada
             isDuplicate,
-            notes: t.installment_info ? `Parcela: ${t.installment_info}` : "",
+            // Pré-preenche com o comentário já salvo pra essa compra (ex: parcela 1/4 já tinha
+            // "Sofá") — não com "Parcela: X": a info de parcela já aparece separada, no badge
+            // (installment_info, ver abaixo), e pré-preencher esse campo com ela fazia o texto
+            // duplicar quando o usuário editava (virava "Sofá Parcela: 1/4 | Parcela: 1/4").
+            notes: purchaseNotes.getNote(card.id, t.description),
             category: suggestedCat || defaultCat // fallback para "Compras" se OCR não identificou
           };
         }));
@@ -222,25 +228,11 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
       const created = [];
       for (const it of selectedItems) {
         const parsed = parseInstallment(it.installment_info);
-
-        // Se uma parcela anterior desta mesma compra já recebeu um comentário de identificação
-        // (ver saveNote em CreditCardInvoices.jsx), o placeholder (Bill) desta parcela futura
-        // carrega esse mesmo comentário — herda ele aqui pra não perder a identificação quando a
-        // parcela finalmente vira uma transação real, mês a mês.
-        const matchingBill = parsed
-          ? freshCardBills.find(b =>
-              b.status === "pending" &&
-              getInstallmentGroupKey(b.title) === getInstallmentGroupKey(it.description) &&
-              b.title.endsWith(`Parcela ${parsed.current}/${parsed.total}`))
-          : null;
-        const defaultNote = it.installment_info ? `Parcela: ${it.installment_info}` : "";
-        const userTypedNote = it.notes && it.notes !== defaultNote ? it.notes : "";
-        const customNote = userTypedNote || matchingBill?.notes || "";
-
-        // Garante que notes contém a info de parcela para fallback no payInvoice
-        const notesWithInstallment = it.installment_info
-          ? (customNote ? `${customNote} | Parcela: ${it.installment_info}` : `Parcela: ${it.installment_info}`)
-          : (customNote || undefined);
+        // notes aqui é só a tag de parcela (fallback pro payInvoice, que perde installments/
+        // installment_number ao virar Transaction comum) — o comentário de identificação (ex:
+        // "Sofá") não mora mais aqui, e sim em PurchaseNote (ver bloco 1c abaixo), resolvido por
+        // card_id + descrição em toda tela que lista o lançamento.
+        const notesWithInstallment = it.installment_info ? `Parcela: ${it.installment_info}` : undefined;
         const tx = await base44.entities.CreditCardTransaction.create({
           card_id: card.id,
           description: it.description,
@@ -252,6 +244,15 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
           notes: notesWithInstallment
         });
         created.push({ tx, parsed, it });
+      }
+
+      // 1c. Comentário de identificação digitado na revisão (campo "Comentário") — grava em
+      // PurchaseNote por card_id + descrição, então já aparece pra essa compra em toda tela do
+      // sistema desde a primeira parcela, sem precisar copiar pra cada parcela futura.
+      for (const it of selectedItems) {
+        if (it.notes && it.notes.trim()) {
+          await purchaseNotes.saveNote(card.id, it.description, it.notes);
+        }
       }
 
       // 1b. Remove o "compromisso futuro" (Bill) que uma fatura anterior criou pra essa mesma

@@ -9,6 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion } from "framer-motion";
 import TransactionList from "../components/transactions/TransactionList";
+import usePurchaseNotes from "../hooks/usePurchaseNotes";
 import TransactionFilters from "../components/transactions/TransactionFilters";
 import { usePlanAccess } from "../components/common/PlanRestriction";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -33,6 +34,7 @@ export default function Transactions() {
   });
 
   const { transactionLimit, isPremium } = usePlanAccess(user);
+  const purchaseNotes = usePurchaseNotes();
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -237,11 +239,12 @@ export default function Transactions() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <TransactionList 
+        <TransactionList
           transactions={filteredTransactions}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onDeleteMany={handleDeleteMany}
+          getPurchaseNote={purchaseNotes.getNote}
         />
       </motion.div>
       </div>

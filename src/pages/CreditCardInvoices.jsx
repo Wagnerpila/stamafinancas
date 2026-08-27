@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { normalizeDesc, getInstallmentGroupKey } from "../components/lib/purchaseMatch";
+import { normalizeDesc } from "../components/lib/purchaseMatch";
+import usePurchaseNotes from "../hooks/usePurchaseNotes";
 
 const statusLabels = {
   open: { label: "Aberta", color: "bg-blue-100 text-blue-800", icon: Clock },
@@ -27,14 +28,16 @@ export default function CreditCardInvoices() {
   const [card, setCard] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [futureBills, setFutureBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
   const [deletingInvoice, setDeletingInvoice] = useState(false);
   const [cleaningDuplicates, setCleaningDuplicates] = useState(false);
-  // Comentário de identificação (ex: "sapato do João") sendo editado numa transação da fatura —
-  // não interfere em nada do cálculo/categoria, é só um texto livre pra reconhecer o lançamento.
+  // Comentário de identificação (ex: "sapato do João") de uma compra parcelada — guardado uma vez
+  // só por compra (PurchaseNote, ver usePurchaseNotes) e resolvido aqui por card_id + descrição,
+  // então edita/mostra igual pra qualquer parcela da mesma compra sem precisar copiar o texto em
+  // cada uma. Não interfere em nada do cálculo/categoria, é só texto livre pra identificação.
+  const purchaseNotes = usePurchaseNotes();
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -43,19 +46,14 @@ export default function CreditCardInvoices() {
     try {
       const user = await base44.auth.me();
       if (cardId) {
-        const [cardData, invoiceData, txData, billsData] = await Promise.all([
+        const [cardData, invoiceData, txData] = await Promise.all([
           base44.entities.CreditCard.filter({ id: cardId }),
           base44.entities.CreditCardInvoice.filter({ card_id: cardId, created_by: user.email }, "-reference_month"),
-          base44.entities.CreditCardTransaction.filter({ card_id: cardId, created_by: user.email }),
-          // Parcelas futuras desta compra que ainda não viraram transação real (placeholders
-          // criados na importação — ver InvoiceOCRDialog.jsx) — usadas só pra propagar o mesmo
-          // comentário pra elas também (ver saveNote).
-          base44.entities.Bill.filter({ card_id: cardId, category: "credit_card", created_by: user.email })
+          base44.entities.CreditCardTransaction.filter({ card_id: cardId, created_by: user.email })
         ]);
         setCard(cardData[0]);
         setInvoices(invoiceData);
         setTransactions(txData);
-        setFutureBills(billsData);
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -66,7 +64,7 @@ export default function CreditCardInvoices() {
 
   const startEditNote = (tx) => {
     setEditingNoteId(tx.id);
-    setNoteDraft(tx.notes || "");
+    setNoteDraft(purchaseNotes.getNote(tx.card_id, tx.description));
   };
 
   const cancelEditNote = () => {
@@ -74,36 +72,10 @@ export default function CreditCardInvoices() {
     setNoteDraft("");
   };
 
-  // Salva o comentário na transação editada e, se ela for parte de uma compra parcelada, no
-  // resto da série: outras parcelas já lançadas (em faturas passadas/futuras) e os compromissos
-  // futuros (Bill) das parcelas que ainda nem viraram transação — assim o "sapato" identifica a
-  // compra inteira, não só a parcela que estava aberta na tela.
   const saveNote = async (tx) => {
-    const notes = noteDraft.trim();
     setSavingNote(true);
     try {
-      await base44.entities.CreditCardTransaction.update(tx.id, { notes: notes || null });
-
-      if (tx.installments > 1) {
-        const groupKey = getInstallmentGroupKey(tx.description);
-
-        const siblingTxs = transactions.filter(other =>
-          other.id !== tx.id &&
-          other.installments === tx.installments &&
-          getInstallmentGroupKey(other.description) === groupKey
-        );
-        const siblingBills = futureBills.filter(bill =>
-          bill.status === "pending" &&
-          getInstallmentGroupKey(bill.title) === groupKey
-        );
-
-        await Promise.all([
-          ...siblingTxs.map(t => base44.entities.CreditCardTransaction.update(t.id, { notes: notes || null })),
-          ...siblingBills.map(b => base44.entities.Bill.update(b.id, { notes: notes || null })),
-        ]);
-      }
-
-      await loadData();
+      await purchaseNotes.saveNote(tx.card_id, tx.description, noteDraft);
       cancelEditNote();
     } catch (error) {
       console.error("Erro ao salvar comentário:", error);
@@ -490,9 +462,9 @@ export default function CreditCardInvoices() {
                                       <X className="w-4 h-4" />
                                     </Button>
                                   </div>
-                                ) : tx.notes ? (
+                                ) : purchaseNotes.getNote(tx.card_id, tx.description) ? (
                                   <p className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 italic mt-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-600/60">
-                                    <MessageSquare className="w-3 h-3 shrink-0" /> {tx.notes}
+                                    <MessageSquare className="w-3 h-3 shrink-0" /> {purchaseNotes.getNote(tx.card_id, tx.description)}
                                   </p>
                                 ) : null}
                               </div>

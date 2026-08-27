@@ -31,6 +31,7 @@ model User {
   creditCards           CreditCard[]
   creditCardInvoices    CreditCardInvoice[]
   creditCardTransactions CreditCardTransaction[]
+  purchaseNotes          PurchaseNote[]
   bills                 Bill[]
   crediarios            Crediario[]
   goals                 Goal[]
@@ -157,6 +158,32 @@ model CreditCardTransaction {
 
   @@index([user_id])
   @@index([card_id])
+}
+
+// Comentário de identificação de uma compra parcelada (ex: "Sofá", "Roupa da Maria"), guardado
+// UMA vez por compra (card_id + group_key) em vez de copiado em cada CreditCardTransaction/Bill/
+// Transaction que representa uma parcela dela — a compra pode ter parcelas em vários estados
+// (algumas já viraram CreditCardTransaction faturada, outras ainda são só um Bill placeholder,
+// outras já viraram Transaction do extrato depois de paga), e replicar o texto em cada uma dessas
+// cópias sempre deixava alguma pra trás (uma parcela materializada antes do comentário existir
+// nunca recebia a cópia, por exemplo). Toda tela que exibe o lançamento resolve o comentário na
+// hora, buscando por card_id + group_key (ver getInstallmentGroupKey em purchaseMatch.js) — uma
+// travessia por description/title que reconhece a mesma compra apesar do sufixo de parcela que
+// cada tipo de registro usa.
+model PurchaseNote {
+  id           String   @id @default(cuid())
+  user_id      String
+  created_by   String
+  card_id      String
+  group_key    String
+  notes        String
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, card_id, group_key])
+  @@index([user_id])
 }
 
 model Bill {
