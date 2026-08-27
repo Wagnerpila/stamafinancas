@@ -40,9 +40,13 @@ export default function FuturePlanningWidget({ bills = [] }) {
       const ccTotal = installmentBills.reduce((s, b) => s + (b.amount || 0), 0);
 
       // Contas recorrentes (mensal/trimestral/anual) que caem neste mês, excluindo as que já
-      // têm cópia própria nesse mês (a cópia, com o valor correto daquele mês, é somada abaixo)
+      // têm cópia própria nesse mês (a cópia, com o valor correto daquele mês, é somada abaixo).
+      // Exclui category="credit_card": essas já entram em ccTotal acima, então contá-las aqui
+      // de novo (quando a recorrência é trimestral/anual, já que "Parcelas CC" não filtra por
+      // recorrência) duplicava o valor no total do card.
       const recurringBills = bills.filter(b => {
         if (b.type !== "payable" || b.status === "paid") return false;
+        if (b.category === "credit_card") return false;
         if (!b.recurrence || b.recurrence === "none") return false;
         if (overriddenIds.has(b.id)) return false;
         return billAppearsInMonth(b, m);
@@ -51,8 +55,10 @@ export default function FuturePlanningWidget({ bills = [] }) {
 
       // Cópias vinculadas ainda pendentes neste mês (ex: valor editado pontualmente para essa
       // ocorrência) — contam com o valor já corrigido; cópias pagas ficam de fora do total.
+      // Mesma exclusão de category="credit_card" acima: a cópia herda a categoria da original.
       const overrideBills = bills.filter(b => {
         if (b.type !== "payable" || b.status === "paid" || !b.linked_bill_id) return false;
+        if (b.category === "credit_card") return false;
         return billAppearsInMonth(b, m);
       });
       const overrideTotal = overrideBills.reduce((s, b) => s + (b.amount || 0), 0);

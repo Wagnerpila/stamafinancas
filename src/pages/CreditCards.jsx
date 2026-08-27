@@ -94,14 +94,21 @@ export default function CreditCards() {
   useEffect(() => { loadCards(); }, []);
 
   const handleSubmit = async (cardData) => {
-    if (editingCard) {
-      await base44.entities.CreditCard.update(editingCard.id, cardData);
-    } else {
-      await base44.entities.CreditCard.create(cardData);
+    try {
+      if (editingCard) {
+        await base44.entities.CreditCard.update(editingCard.id, cardData);
+      } else {
+        await base44.entities.CreditCard.create(cardData);
+      }
+      await loadCards();
+      setShowForm(false);
+      setEditingCard(null);
+    } catch (error) {
+      // Sem isso, um erro do backend (ex: payload inválido) deixava o modal parado sem
+      // nenhum aviso — parecia que o botão Salvar simplesmente não fazia nada.
+      console.error("Erro ao salvar cartão:", error);
+      alert("Não foi possível salvar o cartão. Tente novamente.");
     }
-    await loadCards();
-    setShowForm(false);
-    setEditingCard(null);
   };
 
   const handleDelete = async (id) => {
@@ -234,7 +241,15 @@ export default function CreditCards() {
                         variant="ghost"
                         size="icon"
                         className="text-white/70 hover:text-white hover:bg-white/10"
-                        onClick={() => { setEditingCard(card); setShowForm(true); }}
+                        onClick={() => {
+                          // `card` aqui vem de cardsWithBalance, que injeta availableLimit/usedLimit
+                          // (calculateAvailableLimit) só para exibição. Se esses campos calculados
+                          // fossem parar no form e voltarem no update, o backend rejeita o payload
+                          // por trazer campos que não existem na entidade CreditCard — e o Salvar
+                          // parecia simplesmente não fazer nada. Usa o cartão "cru" de `cards`.
+                          setEditingCard(cards.find(c => c.id === card.id) || card);
+                          setShowForm(true);
+                        }}
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
