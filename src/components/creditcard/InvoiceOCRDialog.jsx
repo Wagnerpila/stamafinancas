@@ -7,7 +7,7 @@ import { base44 } from "@/api/base44Client";
 import { readInvoiceOCR } from "@/functions/readInvoiceOCR";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { EXPENSE_CATEGORIES } from "@/lib/categories";
-import { normalizeDesc } from "../lib/purchaseMatch";
+import { normalizeDesc, getInstallmentGroupKey } from "../lib/purchaseMatch";
 
 // Normaliza a data de um lançamento extraído pela IA pra "YYYY-MM-DD". Faturas brasileiras
 // imprimem a data como DD/MM (sem ano); a IA às vezes repassa isso literalmente em vez de
@@ -222,10 +222,25 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
       const created = [];
       for (const it of selectedItems) {
         const parsed = parseInstallment(it.installment_info);
+
+        // Se uma parcela anterior desta mesma compra já recebeu um comentário de identificação
+        // (ver saveNote em CreditCardInvoices.jsx), o placeholder (Bill) desta parcela futura
+        // carrega esse mesmo comentário — herda ele aqui pra não perder a identificação quando a
+        // parcela finalmente vira uma transação real, mês a mês.
+        const matchingBill = parsed
+          ? freshCardBills.find(b =>
+              b.status === "pending" &&
+              getInstallmentGroupKey(b.title) === getInstallmentGroupKey(it.description) &&
+              b.title.endsWith(`Parcela ${parsed.current}/${parsed.total}`))
+          : null;
+        const defaultNote = it.installment_info ? `Parcela: ${it.installment_info}` : "";
+        const userTypedNote = it.notes && it.notes !== defaultNote ? it.notes : "";
+        const customNote = userTypedNote || matchingBill?.notes || "";
+
         // Garante que notes contém a info de parcela para fallback no payInvoice
         const notesWithInstallment = it.installment_info
-          ? (it.notes ? `${it.notes} | Parcela: ${it.installment_info}` : `Parcela: ${it.installment_info}`)
-          : (it.notes || undefined);
+          ? (customNote ? `${customNote} | Parcela: ${it.installment_info}` : `Parcela: ${it.installment_info}`)
+          : (customNote || undefined);
         const tx = await base44.entities.CreditCardTransaction.create({
           card_id: card.id,
           description: it.description,

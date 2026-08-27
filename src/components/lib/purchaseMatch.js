@@ -15,3 +15,25 @@ export function normalizeDesc(s) {
     .trim()
     .replace(/\s+/g, " ");
 }
+
+// Remove o sufixo de parcela que os dois fluxos de lançamento parcelado colam na descrição, pra
+// sobrar só o nome da compra em si:
+//   - Lançamento manual (CreditCardTransactions.jsx): "Tênis Corrida (2/4)"
+//   - Compromisso futuro gerado pela importação de fatura (InvoiceOCRDialog.jsx), que usa o title
+//     do Bill: "Tênis Corrida — Parcela 2/4"
+// Usado por getInstallmentGroupKey pra reconhecer que duas parcelas são a mesma compra mesmo com
+// esses sufixos diferentes.
+function stripInstallmentSuffix(description) {
+  return String(description || "")
+    .replace(/\s*\(\d+\s*\/\s*\d+\)\s*$/, "")
+    .replace(/\s*—\s*Parcela\s*\d+\s*\/\s*\d+\s*$/i, "");
+}
+
+// Chave usada pra agrupar todas as parcelas de uma mesma compra (CreditCardTransaction já
+// lançadas em faturas passadas/atual, e Bills-placeholder de parcelas futuras ainda não faturadas)
+// independente de qual sufixo de parcela cada uma carrega na descrição/título. Ver
+// CreditCardInvoices.jsx (propagar comentário) e InvoiceOCRDialog.jsx (herdar comentário do
+// placeholder ao materializar a parcela futura).
+export function getInstallmentGroupKey(description) {
+  return normalizeDesc(stripInstallmentSuffix(description));
+}

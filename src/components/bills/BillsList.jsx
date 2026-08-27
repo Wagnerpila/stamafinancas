@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Edit, Trash2, CheckCircle, Clock } from "lucide-react";
+import { MoreVertical, Edit, Trash2, CheckCircle, Clock, MessageSquare } from "lucide-react";
 
 const statusConfig = {
   paid: { label: "Paga", color: "bg-emerald-100 text-emerald-800", icon: CheckCircle },
@@ -37,6 +37,11 @@ export default function BillsList({ bills, onEdit, onDelete, onMarkAsPaid, type 
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Vence em: {format(parseISO(bill.due_date), "dd/MM/yyyy", { locale: ptBR })}
               </p>
+              {bill.notes && (
+                <p className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic mt-1">
+                  <MessageSquare className="w-3 h-3 shrink-0" /> {bill.notes}
+                </p>
+              )}
             </div>
              <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -110,7 +115,14 @@ export default function BillsList({ bills, onEdit, onDelete, onMarkAsPaid, type 
 
                 return (
                   <tr key={bill._virtual ? `${bill.id}-${bill.due_date}` : bill.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
-                    <td className="p-4 font-medium text-slate-800 dark:text-slate-200">{bill.title}</td>
+                    <td className="p-4 font-medium text-slate-800 dark:text-slate-200">
+                      {bill.title}
+                      {bill.notes && (
+                        <p className="flex items-center gap-1 text-xs font-normal text-slate-400 dark:text-slate-500 italic mt-0.5">
+                          <MessageSquare className="w-3 h-3 shrink-0" /> {bill.notes}
+                        </p>
+                      )}
+                    </td>
                     <td className={`p-4 font-semibold ${type === 'payable' ? 'text-red-600' : 'text-emerald-600'}`}>
                       R$ {bill.amount.toFixed(2)}
                     </td>

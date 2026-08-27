@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowLeft, FileText, CheckCircle, Clock, AlertCircle, ShoppingCart, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, CheckCircle, Clock, AlertCircle, ShoppingCart, ChevronDown, ChevronUp, Trash2, Pencil, Check, X, MessageSquare } from "lucide-react";
 import { getCategoryLabel } from "@/lib/categories";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { normalizeDesc } from "../components/lib/purchaseMatch";
+import { normalizeDesc, getInstallmentGroupKey } from "../components/lib/purchaseMatch";
 
 const statusLabels = {
   open: { label: "Aberta", color: "bg-blue-100 text-blue-800", icon: Clock },
@@ -26,29 +27,89 @@ export default function CreditCardInvoices() {
   const [card, setCard] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [futureBills, setFutureBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [expandedInvoice, setExpandedInvoice] = useState(null);
   const [deletingInvoice, setDeletingInvoice] = useState(false);
   const [cleaningDuplicates, setCleaningDuplicates] = useState(false);
+  // Comentário de identificação (ex: "sapato do João") sendo editado numa transação da fatura —
+  // não interfere em nada do cálculo/categoria, é só um texto livre pra reconhecer o lançamento.
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   const loadData = async () => {
     try {
       const user = await base44.auth.me();
       if (cardId) {
-        const [cardData, invoiceData, txData] = await Promise.all([
+        const [cardData, invoiceData, txData, billsData] = await Promise.all([
           base44.entities.CreditCard.filter({ id: cardId }),
           base44.entities.CreditCardInvoice.filter({ card_id: cardId, created_by: user.email }, "-reference_month"),
-          base44.entities.CreditCardTransaction.filter({ card_id: cardId, created_by: user.email })
+          base44.entities.CreditCardTransaction.filter({ card_id: cardId, created_by: user.email }),
+          // Parcelas futuras desta compra que ainda não viraram transação real (placeholders
+          // criados na importação — ver InvoiceOCRDialog.jsx) — usadas só pra propagar o mesmo
+          // comentário pra elas também (ver saveNote).
+          base44.entities.Bill.filter({ card_id: cardId, category: "credit_card", created_by: user.email })
         ]);
         setCard(cardData[0]);
         setInvoices(invoiceData);
         setTransactions(txData);
+        setFutureBills(billsData);
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startEditNote = (tx) => {
+    setEditingNoteId(tx.id);
+    setNoteDraft(tx.notes || "");
+  };
+
+  const cancelEditNote = () => {
+    setEditingNoteId(null);
+    setNoteDraft("");
+  };
+
+  // Salva o comentário na transação editada e, se ela for parte de uma compra parcelada, no
+  // resto da série: outras parcelas já lançadas (em faturas passadas/futuras) e os compromissos
+  // futuros (Bill) das parcelas que ainda nem viraram transação — assim o "sapato" identifica a
+  // compra inteira, não só a parcela que estava aberta na tela.
+  const saveNote = async (tx) => {
+    const notes = noteDraft.trim();
+    setSavingNote(true);
+    try {
+      await base44.entities.CreditCardTransaction.update(tx.id, { notes: notes || null });
+
+      if (tx.installments > 1) {
+        const groupKey = getInstallmentGroupKey(tx.description);
+
+        const siblingTxs = transactions.filter(other =>
+          other.id !== tx.id &&
+          other.installments === tx.installments &&
+          getInstallmentGroupKey(other.description) === groupKey
+        );
+        const siblingBills = futureBills.filter(bill =>
+          bill.status === "pending" &&
+          getInstallmentGroupKey(bill.title) === groupKey
+        );
+
+        await Promise.all([
+          ...siblingTxs.map(t => base44.entities.CreditCardTransaction.update(t.id, { notes: notes || null })),
+          ...siblingBills.map(b => base44.entities.Bill.update(b.id, { notes: notes || null })),
+        ]);
+      }
+
+      await loadData();
+      cancelEditNote();
+    } catch (error) {
+      console.error("Erro ao salvar comentário:", error);
+      alert("Erro ao salvar comentário");
+    } finally {
+      setSavingNote(false);
     }
   };
 
@@ -383,19 +444,57 @@ export default function CreditCardInvoices() {
                             <p className="text-center text-sm text-slate-500 dark:text-slate-400 py-4">Nenhuma transação nesta fatura</p>
                           ) : (
                             transactions.filter(tx => tx.invoice_id === invoice.id).map(tx => (
-                              <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
-                                <div>
-                                  <p className="text-sm font-medium text-slate-900 dark:text-white">{tx.description}</p>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                                   {/* purchase_date vem da API como ISO completo ("...T00:00:00.000Z"), não como
-                                       "YYYY-MM-DD" puro — concatenar "T00:00:00" nele de novo formava uma string
-                                       inválida e mostrava "Invalid Date". Usa só a parte da data (10 primeiros
-                                       caracteres) antes de reconstruir a data local. */}
-                                   {getCategoryLabel(tx.category)} · {tx.purchase_date ? new Date(tx.purchase_date.slice(0, 10) + "T00:00:00").toLocaleDateString("pt-BR") : "—"}
-                                   {tx.installments > 1 && ` · Parcela ${tx.installment_number}/${tx.installments}`}
-                                  </p>
+                              <div key={tx.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                     {/* purchase_date vem da API como ISO completo ("...T00:00:00.000Z"), não como
+                                         "YYYY-MM-DD" puro — concatenar "T00:00:00" nele de novo formava uma string
+                                         inválida e mostrava "Invalid Date". Usa só a parte da data (10 primeiros
+                                         caracteres) antes de reconstruir a data local. */}
+                                     {getCategoryLabel(tx.category)} · {tx.purchase_date ? new Date(tx.purchase_date.slice(0, 10) + "T00:00:00").toLocaleDateString("pt-BR") : "—"}
+                                     {tx.installments > 1 && ` · Parcela ${tx.installment_number}/${tx.installments}`}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <p className="text-sm font-bold text-red-600 dark:text-red-400">R$ {tx.amount.toFixed(2)}</p>
+                                    {editingNoteId !== tx.id && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                        title="Adicionar/editar comentário"
+                                        onClick={() => startEditNote(tx)}
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
-                                <p className="text-sm font-bold text-red-600 dark:text-red-400">R$ {tx.amount.toFixed(2)}</p>
+
+                                {editingNoteId === tx.id ? (
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Input
+                                      autoFocus
+                                      className="h-8 text-xs"
+                                      placeholder='Ex: "sapato do João" — só pra identificar, não muda cálculo/categoria'
+                                      value={noteDraft}
+                                      onChange={(e) => setNoteDraft(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === "Enter") saveNote(tx); if (e.key === "Escape") cancelEditNote(); }}
+                                    />
+                                    <Button size="icon" className="h-8 w-8 shrink-0 bg-emerald-600 hover:bg-emerald-700" disabled={savingNote} onClick={() => saveNote(tx)}>
+                                      <Check className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" disabled={savingNote} onClick={cancelEditNote}>
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                ) : tx.notes ? (
+                                  <p className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 italic mt-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-600/60">
+                                    <MessageSquare className="w-3 h-3 shrink-0" /> {tx.notes}
+                                  </p>
+                                ) : null}
                               </div>
                             ))
                           )}

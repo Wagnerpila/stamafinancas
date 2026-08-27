@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Edit, Trash2, TrendingUp, TrendingDown, CheckSquare, Square, Trash } from "lucide-react";
+import { MoreVertical, Edit, Trash2, TrendingUp, TrendingDown, CheckSquare, Square, Trash, MessageSquare } from "lucide-react";
 
 const categoryStyles = {
   salary: "bg-emerald-100 text-emerald-800",
@@ -85,6 +85,11 @@ export default function TransactionList({ transactions, onEdit, onDelete, onDele
             <Badge className={`mt-1 ${categoryStyles[transaction.category] || categoryStyles.other_expense}`}>
               {transaction.category}
             </Badge>
+            {transaction.notes && (
+              <p className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic mt-1">
+                <MessageSquare className="w-3 h-3 shrink-0" /> {transaction.notes}
+              </p>
+            )}
           </div>
         </div>
         <div className="text-right flex items-center gap-2 shrink-0">
@@ -199,7 +204,14 @@ export default function TransactionList({ transactions, onEdit, onDelete, onDele
                       ? <CheckSquare className="w-4 h-4 text-red-500" />
                       : <Square className="w-4 h-4 text-slate-400" />}
                   </td>
-                  <td className="p-4 font-medium text-slate-800 dark:text-slate-200">{transaction.description}</td>
+                  <td className="p-4 font-medium text-slate-800 dark:text-slate-200">
+                    {transaction.description}
+                    {transaction.notes && (
+                      <p className="flex items-center gap-1 text-xs font-normal text-slate-400 dark:text-slate-500 italic mt-0.5">
+                        <MessageSquare className="w-3 h-3 shrink-0" /> {transaction.notes}
+                      </p>
+                    )}
+                  </td>
                   <td className={`p-4 font-semibold ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
                     {transaction.type === 'income' ? '+' : '-'} R$ {Math.abs(transaction.amount).toFixed(2)}
                   </td>
