@@ -99,11 +99,14 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       items[key].push(item);
     };
 
-    // Transações normais (excluindo vale alimentação)
+    // Transações normais (excluindo vale alimentação e pagamentos de fatura de cartão — estes só
+    // existem como Transaction com invoice_id setado, ver payInvoice em CreditCardInvoices.jsx, e
+    // já são contados abaixo via creditCardTxs pela data da COMPRA; contar os dois teria dois
+    // problemas: duplicava o valor quando compra e pagamento caem no mesmo mês, e nos outros
+    // casos atribuía o gasto ao mês em que a fatura foi paga em vez do mês da compra — mesma
+    // exclusão já usada em TransactionCategories.jsx).
     transactions.forEach(t => {
-      if (t.type !== "expense" || t.is_food_voucher) return;
-      // Ignorar apenas pagamentos de fatura (têm invoice_id E categoria é o pagamento em si)
-      // Manter despesas normais que possam ter invoice_id por outros motivos
+      if (t.type !== "expense" || t.is_food_voucher || t.invoice_id) return;
       const raw = t.date || t.created_date;
       const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
       if (!d || isNaN(d) || !matchesPeriod(d)) return;
@@ -122,7 +125,11 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
       if (!d || isNaN(d) || !matchesPeriod(d)) return;
       const key = resolveCategoryName(t.category, dbCategories);
       const notes = purchaseNotes.getNote(t.card_id, t.description) || t.notes;
-      addItem(key, { id: `cc-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.purchase_date, category: key, source: "creditcard", notes });
+      addItem(key, {
+        id: `cc-${t.id}`, rawId: t.id, description: t.description, amount: t.amount, date: t.purchase_date,
+        category: key, source: "creditcard", notes,
+        installmentLabel: t.installments > 1 ? `Parcela ${t.installment_number}/${t.installments}` : null,
+      });
     });
 
     Object.values(items).forEach(list => list.sort((a, b) => new Date(b.date) - new Date(a.date)));
@@ -269,6 +276,12 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
                                 }
                                 <div className="min-w-0">
                                   <span className="text-sm text-slate-700 dark:text-slate-200 truncate block">{item.description}</span>
+                                  {/* Fora da linha truncada de propósito: o nome da compra costuma ser mais
+                                      longo que o card e cortava o "Parcela X/Y" quando ele vinha grudado
+                                      no fim do texto — aqui embaixo ele sempre aparece inteiro. */}
+                                  {item.installmentLabel && (
+                                    <span className="block text-xs text-slate-400 dark:text-slate-500">{item.installmentLabel}</span>
+                                  )}
                                   {item.notes && (
                                     <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 italic truncate">
                                       <MessageSquare className="w-3 h-3 shrink-0" /> {item.notes}

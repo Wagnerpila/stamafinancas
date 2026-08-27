@@ -90,21 +90,18 @@ export default function TransactionChart({ transactions, creditCardTxs = [], typ
     // vez de somarem numa só.
     const resolveLabel = (raw) => categoryLabels[raw] || raw.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-    // Faturas já pagas (evita dupla contagem com CreditCardTransactions)
-    const paidInvoiceIds = new Set(
-      transactions.filter(t => t.invoice_id).map(t => t.invoice_id)
-    );
-
-    // Transações normais de despesa apenas
+    // Transações normais de despesa, exceto pagamentos de fatura de cartão (Transaction com
+    // invoice_id setado, ver payInvoice em CreditCardInvoices.jsx) — essas já são contadas abaixo
+    // via creditCardTxs, pela data da COMPRA; contar as duas duplicava o valor da fatia quando
+    // compra e pagamento caem no mesmo mês (mesma exclusão de CategorySpendingCompact.jsx).
     transactions.forEach(transaction => {
-      if (transaction.type !== "expense" || transaction.is_food_voucher) return;
+      if (transaction.type !== "expense" || transaction.is_food_voucher || transaction.invoice_id) return;
       const name = resolveLabel(transaction.category);
       data[name] = (data[name] || 0) + Math.abs(transaction.amount);
     });
 
-    // Transações de cartão — apenas de faturas não pagas
+    // Transações de cartão — pela data da compra (já filtradas por período por quem chama)
     creditCardTxs.forEach(t => {
-      if (t.invoice_id && paidInvoiceIds.has(t.invoice_id)) return;
       const name = resolveLabel(t.category || "other_expense");
       data[name] = (data[name] || 0) + Math.abs(t.amount || 0);
     });

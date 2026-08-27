@@ -92,6 +92,21 @@ export default function Dashboard() {
     });
   }, [transactions, selectedDate, yearMode]);
 
+  // Mesmo filtro de período, mas para CreditCardTransaction (pela data da compra) — usado só pelo
+  // gráfico de pizza (TransactionChart). Sem isso, o pie chart recebia TODAS as compras de cartão
+  // já lançadas (não só as do mês/ano selecionado) e a fatia de cada categoria não batia com o
+  // card "Gastos por Categoria" logo abaixo, que já filtra por período corretamente.
+  const monthlyCreditCardTxs = useMemo(() => {
+    return creditCardTxs.filter(t => {
+      const raw = t.purchase_date || t.created_date;
+      const d = raw && raw.length === 10 ? new Date(raw + "T00:00:00") : new Date(raw);
+      if (!d || isNaN(d)) return false;
+      if (yearMode) return d.getFullYear() === selectedDate.getFullYear();
+      return d.getMonth() === selectedDate.getMonth() &&
+             d.getFullYear() === selectedDate.getFullYear();
+    });
+  }, [creditCardTxs, selectedDate, yearMode]);
+
   // Agrupa receitas do período por categoria (Salário, Pix, Dinheiro, Investimentos, etc. — o
   // que o usuário tiver cadastrado como categoria de receita) pro widget "Receitas por Categoria".
   const incomeBreakdown = useMemo(() => {
@@ -350,7 +365,7 @@ export default function Dashboard() {
             <TransactionChart transactions={monthlyTransactions} />
           </div>
           <div>
-            <TransactionChart transactions={monthlyTransactions} creditCardTxs={creditCardTxs} type="pie" />
+            <TransactionChart transactions={monthlyTransactions} creditCardTxs={monthlyCreditCardTxs} type="pie" />
           </div>
         </div>
 
