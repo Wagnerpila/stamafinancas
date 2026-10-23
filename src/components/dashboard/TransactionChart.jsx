@@ -161,7 +161,7 @@ export default function TransactionChart({ transactions, creditCardTxs = [], typ
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <Card className="">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-slate-900">
               Gastos por Categoria
@@ -219,7 +219,7 @@ export default function TransactionChart({ transactions, creditCardTxs = [], typ
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, delay: 0.1 }}
     >
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-lg font-bold text-slate-900">
             Receitas vs Despesas

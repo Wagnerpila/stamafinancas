@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowLeft, FileText, CheckCircle, Clock, AlertCircle, ShoppingCart, ChevronDown, ChevronUp, Trash2, Pencil, Check, X, MessageSquare } from "lucide-react";
+import { FileText, CheckCircle, Clock, AlertCircle, ShoppingCart, ChevronDown, ChevronUp, Trash2, Pencil, Check, X, MessageSquare } from "lucide-react";
 import { getCategoryLabel } from "@/lib/categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { normalizeDesc } from "../components/lib/purchaseMatch";
 import usePurchaseNotes from "../hooks/usePurchaseNotes";
+import { usePageHeader } from "../components/stama/kit";
 
 const statusLabels = {
   open: { label: "Aberta", color: "bg-blue-100 text-blue-800", icon: Clock },
@@ -263,6 +264,24 @@ export default function CreditCardInvoices() {
     }
   };
 
+  const duplicatesAction = (
+    <button
+      type="button"
+      onClick={cleanupDuplicateBills}
+      disabled={cleaningDuplicates}
+      title="Remove compromissos futuros (parcelas) duplicados deste cartão"
+      className="hidden rounded-full border border-slate-200 px-4 py-2 font-display text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 sm:block"
+    >
+      {cleaningDuplicates ? "Verificando..." : "Corrigir duplicidades"}
+    </button>
+  );
+  usePageHeader({
+    title: "Faturas",
+    subtitle: card ? `${card.name} · ${invoices.length} fatura${invoices.length === 1 ? "" : "s"}` : undefined,
+    back: "CreditCards",
+    actions: duplicatesAction,
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -283,7 +302,7 @@ export default function CreditCardInvoices() {
   const unbilledAmount = transactions.filter(tx => !tx.invoice_id).reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto relative">
+    <div className="relative mx-auto max-w-3xl space-y-5 px-4 py-5 lg:px-8">
       {deletingInvoice && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4">
@@ -292,33 +311,14 @@ export default function CreditCardInvoices() {
           </div>
         </div>
       )}
-      <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("CreditCards"))}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Faturas - {card.name}</h1>
-          <p className="text-slate-600 dark:text-slate-300">Gerencie as faturas do cartão</p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={cleanupDuplicateBills}
-          disabled={cleaningDuplicates}
-          title="Remove compromissos futuros (parcelas) duplicados deste cartão"
-        >
-          {cleaningDuplicates ? "Verificando..." : "Corrigir duplicidades"}
-        </Button>
-      </div>
-
       {unbilledAmount > 0 && (
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="border-0 shadow-lg bg-blue-50 dark:bg-blue-900/20 mb-6">
+          <Card className="mb-2">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 mb-1">Compras não Faturadas</p>
-                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">R$ {unbilledAmount.toFixed(2)}</p>
+                  <p className="section-label !text-[11px] !text-slate-500 mb-2">Compras não faturadas</p>
+                  <p className="font-display text-3xl font-bold text-slate-900 dark:text-white">R$ {unbilledAmount.toFixed(2)}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Compras lançadas neste cartão que ainda não entraram em nenhuma fatura
                   </p>
@@ -342,7 +342,7 @@ export default function CreditCardInvoices() {
 
       <div className="space-y-4">
         {invoices.length === 0 ? (
-          <Card className="border-0 shadow-lg">
+          <Card className="">
             <CardContent className="p-12 text-center">
               <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">Nenhuma fatura gerada</h3>
@@ -354,7 +354,7 @@ export default function CreditCardInvoices() {
             const StatusIcon = statusLabels[invoice.status].icon;
             return (
               <motion.div key={invoice.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border-0 shadow-lg">
+                <Card className="">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle>Fatura {invoice.reference_month}</CardTitle>
@@ -416,7 +416,7 @@ export default function CreditCardInvoices() {
                             <p className="text-center text-sm text-slate-500 dark:text-slate-400 py-4">Nenhuma transação nesta fatura</p>
                           ) : (
                             transactions.filter(tx => tx.invoice_id === invoice.id).map(tx => (
-                              <div key={tx.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
+                              <div key={tx.id} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
@@ -455,7 +455,7 @@ export default function CreditCardInvoices() {
                                       onChange={(e) => setNoteDraft(e.target.value)}
                                       onKeyDown={(e) => { if (e.key === "Enter") saveNote(tx); if (e.key === "Escape") cancelEditNote(); }}
                                     />
-                                    <Button size="icon" className="h-8 w-8 shrink-0 bg-emerald-600 hover:bg-emerald-700" disabled={savingNote} onClick={() => saveNote(tx)}>
+                                    <Button size="icon" className="h-8 w-8 shrink-0 bg-brand-700 hover:bg-brand-800" disabled={savingNote} onClick={() => saveNote(tx)}>
                                       <Check className="w-4 h-4" />
                                     </Button>
                                     <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" disabled={savingNote} onClick={cancelEditNote}>
@@ -475,7 +475,7 @@ export default function CreditCardInvoices() {
                     </div>
 
                     {invoice.status !== "paid" && (
-                      <Button onClick={() => payInvoice(invoice)} className="w-full bg-emerald-600 hover:bg-emerald-700 mt-4">
+                      <Button onClick={() => payInvoice(invoice)} className="w-full bg-brand-700 hover:bg-brand-800 mt-4">
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Pagar Fatura
                       </Button>

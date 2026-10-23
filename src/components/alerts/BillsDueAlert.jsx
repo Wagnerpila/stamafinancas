@@ -137,7 +137,7 @@ export default function BillsDueAlert() {
           {alertItems.map((item) => {
             const urgency = getUrgencyLabel(item);
             return (
-              <div key={item.id} className="flex items-start justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+              <div key={item.id} className="flex items-start justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl">
                 <div className="flex items-start gap-2 min-w-0">
                   {item.type === "invoice"
                     ? <CreditCard className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
@@ -159,7 +159,7 @@ export default function BillsDueAlert() {
           })}
         </div>
 
-        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl border border-orange-200 dark:border-orange-800">
           <div className="flex justify-between items-center">
             <span className="font-semibold text-slate-700 dark:text-slate-200">Total pendente:</span>
             <span className="font-bold text-orange-600 text-lg">R$ {formatBRL(total)}</span>
@@ -168,7 +168,7 @@ export default function BillsDueAlert() {
 
         <AlertDialogFooter className="gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>Fechar</Button>
-          <Button onClick={() => { setOpen(false); navigate(createPageUrl("BillsToPay")); }} className="bg-orange-600 hover:bg-orange-700">
+          <Button onClick={() => { setOpen(false); navigate(createPageUrl("BillsToPay")); }} className="bg-brand-700 hover:bg-brand-800">
             Ver Contas
           </Button>
           <Button onClick={() => { setOpen(false); navigate(createPageUrl("CreditCards")); }} className="bg-blue-600 hover:bg-blue-700">

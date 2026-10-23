@@ -75,7 +75,7 @@ export default function AvatarPickerDialog({ open, onOpenChange, currentAvatar, 
                 <button
                   key={emoji}
                   onClick={() => { setSelected(emoji); setPreviewUrl(null); }}
-                  className={`w-9 h-9 rounded-lg text-xl flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors relative ${selected === emoji ? 'bg-blue-100 dark:bg-blue-800 ring-2 ring-blue-500' : 'bg-slate-100 dark:bg-slate-700'}`}
+                  className={`w-9 h-9 rounded-2xl text-xl flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors relative ${selected === emoji ? 'bg-blue-100 dark:bg-blue-800 ring-2 ring-blue-500' : 'bg-slate-100 dark:bg-slate-700'}`}
                 >
                   {emoji}
                   {selected === emoji && <Check className="absolute -top-1 -right-1 w-3 h-3 text-blue-600 bg-white rounded-full" />}

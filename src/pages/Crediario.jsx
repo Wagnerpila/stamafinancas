@@ -98,19 +98,18 @@ export default function Crediario() {
   if (loading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Crediário</h1>
           <p className="text-slate-600 dark:text-slate-300 mt-1">Compras parceladas em loja</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-purple-600 hover:bg-purple-700">
+        <Button onClick={() => setShowForm(true)} className="bg-brand-700 hover:bg-brand-800">
           <Plus className="w-5 h-5 mr-2" /> Novo Crediário
         </Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80">
+        <Card className=" dark:bg-slate-800/80">
           <CardContent className="p-5 flex items-center gap-3">
             <CreditCard className="w-8 h-8 text-purple-600" />
             <div>
@@ -119,7 +118,7 @@ export default function Crediario() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80">
+        <Card className=" dark:bg-slate-800/80">
           <CardContent className="p-5 flex items-center gap-3">
             <AlertTriangle className="w-8 h-8 text-red-500" />
             <div>
@@ -128,7 +127,7 @@ export default function Crediario() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80">
+        <Card className=" dark:bg-slate-800/80">
           <CardContent className="p-5 flex items-center gap-3">
             <Store className="w-8 h-8 text-orange-500" />
             <div>
@@ -152,7 +151,7 @@ export default function Crediario() {
       </Dialog>
 
       {items.length === 0 ? (
-        <Card className="border-0 shadow-lg">
+        <Card className="">
           <CardContent className="p-16 text-center">
             <Store className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-900 mb-2">Nenhum crediário cadastrado</h3>
@@ -168,7 +167,7 @@ export default function Crediario() {
             const [badgeClass, badgeLabel] = statusBadge(item.status);
             return (
               <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80">
+                <Card className=" dark:bg-slate-800/80">
                   <CardContent className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                       <div className="flex-1">

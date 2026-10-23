@@ -181,7 +181,7 @@ export default function CommunityNetwork() {
 
   if (!myData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-6">
+      <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto">
           <Card>
             <CardContent className="p-12 text-center">
@@ -196,7 +196,7 @@ export default function CommunityNetwork() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-4 md:p-6">
+    <div className="min-h-screen p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Header */}
@@ -213,7 +213,6 @@ export default function CommunityNetwork() {
               </button>
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">Rede de Usuários</h1>
               <p className="text-slate-600 dark:text-slate-300">
                 Seu ID: <span className="font-bold text-blue-600">{formatId(myData._displayNumber)}</span>
               </p>
@@ -238,7 +237,7 @@ export default function CommunityNetwork() {
           <TabsContent value="network" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {users.filter(u => u.is_sharing !== false).map((user) => (
-                <Card key={user.id} className="hover:shadow-lg transition-shadow">
+                <Card key={user.id} className="hover: transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
                       <UserAvatar avatarUrl={user.avatar_url} size="sm" number={user._displayNumber} />
@@ -312,14 +311,14 @@ export default function CommunityNetwork() {
                             <p className="font-bold text-lg">{formatId(fromUser?._displayNumber)}</p>
                             <p className="text-sm text-slate-600">quer se conectar com você</p>
                             {request.message && (
-                              <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                              <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-2xl border border-blue-200 dark:border-blue-800">
                                 <p className="text-sm text-slate-700 dark:text-slate-300">{request.message}</p>
                               </div>
                             )}
                           </div>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          <Button onClick={() => handleRequest(request.id, 'accepted')} size="sm" className="bg-green-600 hover:bg-green-700">
+                          <Button onClick={() => handleRequest(request.id, 'accepted')} size="sm" className="bg-brand-700 hover:bg-brand-800">
                             <CheckCircle className="w-4 h-4 mr-1" />
                             Aceitar
                           </Button>

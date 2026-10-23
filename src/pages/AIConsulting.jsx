@@ -10,10 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Send, Lightbulb, TrendingUp, PieChart, Target, Loader2, RefreshCw, BookOpen, ArrowLeft } from "lucide-react";
+import { Bot, Send, Lightbulb, TrendingUp, PieChart, Target, Loader2, RefreshCw, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { usePlanAccess, PlanRestriction, requestUpgrade } from "../components/common/PlanRestriction";
 
 const quickQuestions = [
@@ -245,7 +244,7 @@ export default function AIConsulting() {
 
   if (user && !hasAccess.ai_consulting) {
     return (
-      <div className="p-4 md:p-8 max-w-6xl mx-auto">
+      <div className="px-4 py-5 lg:px-8 max-w-6xl mx-auto">
         <PlanRestriction
           title="Consultoria IA Premium"
           description="A consultoria financeira com inteligência artificial está disponível apenas no plano Premium."
@@ -256,7 +255,7 @@ export default function AIConsulting() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-6xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -264,26 +263,17 @@ export default function AIConsulting() {
       >
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(createPageUrl("Dashboard"))}
-              className="hover:bg-slate-100"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
             <div className="flex-1 text-center">
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Bot className="w-8 h-8 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Consultoria Financeira IA</h1>
               <p className="text-slate-600 dark:text-slate-300 mt-2">Receba conselhos personalizados baseados nos seus dados financeiros</p>
             </div>
           </div>
         </div>
 
         {/* Monthly AI Summary */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 mb-8">
+        <Card className=" dark:from-purple-900/20 dark:to-blue-900/20 mb-8">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-purple-600" />
@@ -293,7 +283,7 @@ export default function AIConsulting() {
               onClick={generateMonthlySummary}
               disabled={generatingSummary}
               size="sm"
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-brand-700 hover:bg-brand-800"
             >
               {generatingSummary ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               {generatingSummary ? 'Gerando...' : savedSummary ? 'Atualizar' : 'Gerar Análise'}
@@ -303,31 +293,31 @@ export default function AIConsulting() {
             {savedSummary ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-3 text-center shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-3 text-center shadow-sm">
                     <p className="text-xs text-slate-500 dark:text-slate-400">Receita do Mês</p>
                     <p className="text-lg font-bold text-emerald-600">R$ {savedSummary.total_income?.toFixed(2)}</p>
                   </div>
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-3 text-center shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-3 text-center shadow-sm">
                     <p className="text-xs text-slate-500 dark:text-slate-400">Despesa do Mês</p>
                     <p className="text-lg font-bold text-red-600">R$ {savedSummary.total_expense?.toFixed(2)}</p>
                   </div>
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-3 text-center shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-3 text-center shadow-sm">
                     <p className="text-xs text-slate-500 dark:text-slate-400">Saldo</p>
                     <p className={`text-lg font-bold ${savedSummary.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>R$ {savedSummary.balance?.toFixed(2)}</p>
                   </div>
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-3 text-center shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-3 text-center shadow-sm">
                     <p className="text-xs text-slate-500 dark:text-slate-400">Taxa de Poupança</p>
                     <p className={`text-lg font-bold ${savedSummary.savings_rate >= 20 ? 'text-emerald-600' : 'text-yellow-600'}`}>{savedSummary.savings_rate?.toFixed(1)}%</p>
                   </div>
                 </div>
                 {savedSummary.ai_insights && (
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm">
                     <p className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">💡 Análise da IA</p>
                     <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{savedSummary.ai_insights}</p>
                   </div>
                 )}
                 {savedSummary.savings_tips && (
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm">
                     <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">💰 Dicas de Economia Personalizadas</p>
                     <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{savedSummary.savings_tips}</p>
                   </div>
@@ -339,7 +329,7 @@ export default function AIConsulting() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm mb-8">
+        <Card className=" dark:bg-slate-800/80 mb-8">
           <CardHeader>
             <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">Fazer uma pergunta</CardTitle>
           </CardHeader>
@@ -354,7 +344,7 @@ export default function AIConsulting() {
               <Button 
                 onClick={() => handleSubmitQuestion()}
                 disabled={isLoading || !currentQuestion.trim()}
-                className="w-full bg-purple-600 hover:bg-purple-700"
+                className="w-full bg-brand-700 hover:bg-brand-800"
               >
                 {isLoading ? (
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -367,7 +357,7 @@ export default function AIConsulting() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm mb-8">
+        <Card className=" dark:bg-slate-800/80 mb-8">
           <CardHeader>
             <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">Perguntas Rápidas</CardTitle>
           </CardHeader>
@@ -403,7 +393,7 @@ export default function AIConsulting() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+              <Card className=" dark:bg-slate-800/80">
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     <div className="flex items-start gap-4">
@@ -436,7 +426,7 @@ export default function AIConsulting() {
         </AnimatePresence>
 
         {consultations.length === 0 && (
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+          <Card className=" dark:bg-slate-800/80">
             <CardContent className="p-16 text-center">
               <Bot className="w-16 h-16 text-slate-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Nenhuma consulta ainda</h3>

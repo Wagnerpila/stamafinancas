@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { User } from "@/entities/User"; // New import
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowLeft, Upload, FileText, Loader2, AlertCircle } from "lucide-react";
+import { Upload, FileText, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -117,13 +117,9 @@ export default function FileUploadTransaction() {
 
   if (!hasAccess.file_upload) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto">
+      <div className="px-4 py-5 lg:px-8 max-w-2xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("NewTransactionOptions"))}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Upload de Arquivo</h1>
             <p className="text-slate-600 dark:text-slate-300">Envie um comprovante para extração automática.</p>
           </div>
         </div>
@@ -138,20 +134,18 @@ export default function FileUploadTransaction() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-2xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-8"
       >
-        <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("NewTransactionOptions"))}><ArrowLeft className="w-5 h-5" /></Button>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Upload de Arquivo</h1>
           <p className="text-slate-600 dark:text-slate-300">Envie um comprovante para extração automática.</p>
         </div>
       </motion.div>
 
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+      <Card className=" dark:bg-slate-800">
         <CardContent className="p-6">
           {error && <Alert variant="destructive" className="mb-4"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
 
@@ -160,7 +154,7 @@ export default function FileUploadTransaction() {
             onDragOver={handleDrag}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
               dragActive ? 'border-blue-400 bg-blue-50' : 'border-slate-200'
             }`}
           >
@@ -179,7 +173,7 @@ export default function FileUploadTransaction() {
           </div>
 
           {file && !isProcessing && (
-            <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+            <div className="mt-4 p-4 border rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
               <div className="flex items-center gap-3">
                 <FileText className="w-6 h-6 text-slate-600" />
                 <span className="font-medium">{file.name}</span>

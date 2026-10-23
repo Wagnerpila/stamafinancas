@@ -12,7 +12,7 @@ export function PlanRestriction({ title, description, onUpgrade }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex items-center justify-center min-h-[400px] p-8"
     >
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-orange-50 max-w-md">
+      <Card className=" max-w-md">
         <CardHeader className="text-center">
           <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-white" />
@@ -25,7 +25,7 @@ export function PlanRestriction({ title, description, onUpgrade }) {
         <CardContent className="text-center space-y-6">
           <p className="text-slate-600">{description}</p>
           
-          <div className="bg-white/50 rounded-lg p-4">
+          <div className="bg-white/50 rounded-2xl p-4">
             <h4 className="font-semibold text-slate-900 mb-2">Recursos Premium incluem:</h4>
             <ul className="text-sm text-slate-700 space-y-1">
               <li>• Transações ilimitadas</li>
@@ -39,7 +39,7 @@ export function PlanRestriction({ title, description, onUpgrade }) {
 
           <Button 
             onClick={onUpgrade}
-            className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700"
+            className="w-full bg-gradient-to-r from-yellow-600 to-orange-600"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
             Solicitar Upgrade

@@ -368,7 +368,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
 
         {/* Upload area */}
         <div
-          className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-5 text-center cursor-pointer hover:border-blue-400 transition-colors"
+          className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-5 text-center cursor-pointer hover:border-blue-400 transition-colors"
           onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
           onDragOver={e => e.preventDefault()}
           onClick={() => fileRef.current.click()}
@@ -398,14 +398,14 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-sm">
+          <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl text-sm">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />{error}
           </div>
         )}
 
         {result && items.length > 0 && (
           <div className="space-y-3">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg space-y-2">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl space-y-2">
               <div>
                 <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm">
                   Fatura {result.reference_month} · R$ {formatBRL(result.total_amount)}
@@ -429,7 +429,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
                 return (
                   <div
                     key={i}
-                    className={`rounded-lg border transition-colors ${
+                    className={`rounded-2xl border transition-colors ${
                       it.selected
                         ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20"
                         : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-50"
@@ -485,7 +485,7 @@ export default function InvoiceOCRDialog({ open, onClose, card, onImportSuccess 
             </div>
 
             {skippedItems.length > 0 && (
-              <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-lg p-2.5">
+              <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-2.5">
                 <button
                   type="button"
                   onClick={() => setShowSkipped(v => !v)}

@@ -6,10 +6,9 @@ import { Transaction } from "@/entities/Transaction";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Target, TrendingUp, Calendar, Trophy, ArrowLeft } from "lucide-react";
+import { Plus, Target, TrendingUp, Calendar, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import GoalForm from "../components/goals/GoalForm.jsx";
 import GoalCard from "../components/goals/GoalCard";
 
@@ -152,7 +151,7 @@ export default function Goals() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-7xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -160,16 +159,7 @@ export default function Goals() {
       >
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(createPageUrl("Dashboard"))}
-              className="hover:bg-slate-100"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Metas Financeiras</h1>
               <p className="text-slate-600 dark:text-slate-300">Defina e acompanhe seus objetivos financeiros</p>
             </div>
           </div>
@@ -178,7 +168,7 @@ export default function Goals() {
               setEditingGoal(null);
               setShowForm(true);
             }}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-brand-700 hover:bg-brand-800"
           >
             <Plus className="w-5 h-5 mr-2" />
             Nova Meta
@@ -186,7 +176,7 @@ export default function Goals() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+          <Card className=" dark:bg-slate-800/80">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <Target className="w-8 h-8 text-purple-600" />
@@ -198,7 +188,7 @@ export default function Goals() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+          <Card className=" dark:bg-slate-800/80">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <Trophy className="w-8 h-8 text-emerald-600" />
@@ -210,7 +200,7 @@ export default function Goals() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+          <Card className=" dark:bg-slate-800/80">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <TrendingUp className="w-8 h-8 text-blue-600" />
@@ -222,7 +212,7 @@ export default function Goals() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+          <Card className=" dark:bg-slate-800/80">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <Calendar className="w-8 h-8 text-orange-600" />
@@ -264,7 +254,7 @@ export default function Goals() {
         ))}
         
         {goals.length === 0 && (
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm md:col-span-2 lg:col-span-3">
+          <Card className=" dark:bg-slate-800/80 md:col-span-2 lg:col-span-3">
             <CardContent className="p-16 text-center">
               <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Target className="w-8 h-8 text-purple-600" />
@@ -274,7 +264,7 @@ export default function Goals() {
               <Button onClick={() => {
                 setEditingGoal(null);
                 setShowForm(true);
-              }} className="bg-purple-600 hover:bg-purple-700">
+              }} className="bg-brand-700 hover:bg-brand-800">
                 <Plus className="w-5 h-5 mr-2" />
                 Criar Primeira Meta
               </Button>

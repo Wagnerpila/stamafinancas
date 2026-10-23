@@ -3,7 +3,7 @@ import { UploadFile, statementImport } from "@/api/integrations";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowLeft, Upload, Loader2, AlertCircle } from "lucide-react";
+import { Upload, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -90,20 +90,18 @@ export default function ImportStatement() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-2xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-8"
       >
-        <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("NewTransactionOptions"))}><ArrowLeft className="w-5 h-5" /></Button>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Importar Extrato Bancário</h1>
           <p className="text-slate-600 dark:text-slate-300">Envie um arquivo PDF ou CSV para extração em massa.</p>
         </div>
       </motion.div>
 
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+      <Card className=" dark:bg-slate-800">
         <CardHeader>
           <CardTitle className="dark:text-white">Faça o Upload do Arquivo</CardTitle>
         </CardHeader>
@@ -115,7 +113,7 @@ export default function ImportStatement() {
             onDragOver={handleDrag}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
               dragActive ? 'border-teal-400 bg-teal-50' : 'border-slate-200'
             }`}
           >
@@ -134,7 +132,7 @@ export default function ImportStatement() {
           </div>
 
           {file && (
-            <div className="mt-4 p-4 border rounded-lg flex items-center justify-between bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+            <div className="mt-4 p-4 border rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
               <span className="font-medium dark:text-slate-200">{file.name}</span>
               <Button onClick={() => setFile(null)} variant="ghost" size="sm">Remover</Button>
             </div>
@@ -143,7 +141,7 @@ export default function ImportStatement() {
           <Button
             onClick={processFile}
             disabled={!file || isProcessing}
-            className="w-full mt-6 h-12 text-lg bg-teal-600 hover:bg-teal-700"
+            className="w-full mt-6 h-12 text-lg bg-brand-700 hover:bg-brand-800"
           >
             {isProcessing ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processando Extrato...</>

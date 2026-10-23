@@ -108,7 +108,7 @@ export default function ChatDialog({ open, onOpenChange, connection, currentUser
         </DialogHeader>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto space-y-3 p-4 bg-slate-50 rounded-lg">
+        <div className="flex-1 overflow-y-auto space-y-3 p-4 bg-slate-50 rounded-2xl">
           {messages.map((msg) => {
             const isMe = msg.sender_id === currentUser.id;
             return (
@@ -117,7 +117,7 @@ export default function ChatDialog({ open, onOpenChange, connection, currentUser
                 className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[70%] px-4 py-2 rounded-lg ${
+                  className={`max-w-[70%] px-4 py-2 rounded-2xl ${
                     isMe
                       ? 'bg-blue-600 text-white'
                       : 'bg-white text-slate-900 border'

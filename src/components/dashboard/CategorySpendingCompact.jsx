@@ -191,7 +191,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
   if (visible.length === 0) return null;
 
   return (
-    <Card className="border-0 shadow-lg">
+    <Card className="">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold dark:text-white flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
             const items = itemsByCategory[cat.name] || [];
             const itemCount = items.length;
             return (
-              <div key={cat.name} className="bg-slate-50 dark:bg-slate-700/50 rounded-xl overflow-hidden">
+              <div key={cat.name} className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setExpandedCategory(prev => (prev === cat.name ? null : cat.name))}
@@ -232,7 +232,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
+                      className="w-9 h-9 rounded-2xl flex items-center justify-center text-lg shrink-0"
                       style={{ backgroundColor: (isOver ? "#ef4444" : (cat.color || "#3b82f6")) + "22" }}
                     >
                       {cat.icon || "📦"}
@@ -267,7 +267,7 @@ export default function CategorySpendingCompact({ transactions = [], creditCardT
                       {items.map(item => {
                         const isEditing = editingItemId === item.id;
                         return (
-                          <div key={item.id} className="rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                          <div key={item.id} className="rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50">
                             <div className="flex items-center justify-between gap-3 py-1.5 px-2">
                               <div className="flex items-center gap-2 min-w-0">
                                 {item.source === "creditcard"

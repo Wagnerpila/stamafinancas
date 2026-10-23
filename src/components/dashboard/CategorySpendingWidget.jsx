@@ -51,7 +51,7 @@ export default function CategorySpendingWidget({ transactions = [], user }) {
   if (activeCategories.length === 0) return null;
 
   return (
-    <Card className="border-0 shadow-lg border-l-4 border-emerald-500">
+    <Card className=" border-l-4 border-emerald-500">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold dark:text-white flex items-center gap-2">

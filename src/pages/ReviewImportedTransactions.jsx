@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
-import { ArrowLeft, Save, Trash2, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { Save, Trash2, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -96,11 +96,11 @@ export default function ReviewImportedTransactions() {
 
   if (success) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto flex items-center justify-center min-h-[50vh]">
+      <div className="px-4 py-5 lg:px-8 max-w-2xl mx-auto flex items-center justify-center min-h-[50vh]">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center p-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg"
+          className="text-center p-8 rounded-2xl"
         >
           <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Transações Importadas!</h2>
@@ -111,22 +111,18 @@ export default function ReviewImportedTransactions() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-5xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex justify-between items-center mb-8"
       >
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("ImportStatement"))}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Revise suas Transações</h1>
             <p className="text-slate-600 dark:text-slate-300">Ajuste e categorize as transações importadas antes de salvar.</p>
           </div>
         </div>
-        <Button onClick={handleSaveAll} disabled={isSaving || visibleTransactions.length === 0} className="bg-emerald-600 hover:bg-emerald-700">
+        <Button onClick={handleSaveAll} disabled={isSaving || visibleTransactions.length === 0} className="bg-brand-700 hover:bg-brand-800">
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Salvar {visibleTransactions.length} Transações
         </Button>
@@ -140,7 +136,7 @@ export default function ReviewImportedTransactions() {
         <Button variant={importFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setImportFilter('all')}>
           Todas ({transactions.length})
         </Button>
-        <Button variant={importFilter === 'income' ? 'default' : 'outline'} size="sm" onClick={() => setImportFilter('income')} className={importFilter === 'income' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>
+        <Button variant={importFilter === 'income' ? 'default' : 'outline'} size="sm" onClick={() => setImportFilter('income')} className={importFilter === 'income' ? 'bg-brand-700 hover:bg-brand-800' : ''}>
           Só Entradas ({incomeCount})
         </Button>
         <Button variant={importFilter === 'expense' ? 'default' : 'outline'} size="sm" onClick={() => setImportFilter('expense')} className={importFilter === 'expense' ? 'bg-red-600 hover:bg-red-700' : ''}>
@@ -157,7 +153,7 @@ export default function ReviewImportedTransactions() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, x: -50 }}
           >
-            <Card className="border-0 shadow-md bg-white/80 dark:bg-slate-800 backdrop-blur-sm overflow-hidden">
+            <Card className=" dark:bg-slate-800 overflow-hidden">
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                   <div className="md:col-span-3">

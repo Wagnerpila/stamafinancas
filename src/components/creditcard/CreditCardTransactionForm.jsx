@@ -43,7 +43,7 @@ export default function CreditCardTransactionForm({ cardId, onSubmit, onCancel }
   };
 
   return (
-    <Card className="border-0 shadow-lg">
+    <Card className="">
       <CardHeader>
         <CardTitle>Novo Lançamento</CardTitle>
       </CardHeader>

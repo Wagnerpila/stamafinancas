@@ -11,7 +11,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
 } from "recharts";
 import {
-  AlertTriangle, CreditCard, TrendingDown, ArrowLeft,
+  AlertTriangle, CreditCard, TrendingDown,
   DollarSign, Zap, LayoutList, CalendarRange, MessageSquare
 } from "lucide-react";
 import { addMonths, format, startOfMonth } from "date-fns";
@@ -269,16 +269,12 @@ export default function FuturePlanning() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-4 mb-8">
         <Link to={createPageUrl("Dashboard")}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Planejamento Futuro</h1>
           <p className="text-slate-600 dark:text-slate-300">Visibilidade dos compromissos financeiros dos próximos meses</p>
         </div>
         <div className="flex items-center gap-2 ml-auto">
@@ -315,7 +311,7 @@ export default function FuturePlanning() {
             >
               <Card
                 onClick={() => setSelectedMonthKey(d.key)}
-                className={`border-0 shadow-lg cursor-pointer hover:shadow-xl transition-shadow ${isCritical ? "border-l-4 border-red-500" : "border-l-4 border-blue-500"}`}
+                className={` cursor-pointer hover: transition-shadow ${isCritical ? "border-l-4 border-red-500" : "border-l-4 border-blue-500"}`}
               >
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-2">
@@ -363,7 +359,7 @@ export default function FuturePlanning() {
       </div>
 
       {/* Chart */}
-      <Card className="border-0 shadow-lg mb-8">
+      <Card className=" mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 dark:text-white">
             <TrendingDown className="w-5 h-5 text-red-500" />
@@ -407,7 +403,7 @@ export default function FuturePlanning() {
                     {selectedItems.installments.map(b => {
                       const note = b.card_id ? purchaseNotes.getNote(b.card_id, b.title) : "";
                       return (
-                        <div key={b.id} className="flex items-center justify-between gap-3 p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                        <div key={b.id} className="flex items-center justify-between gap-3 p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-2xl">
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{b.title}</p>
                             {note && (
@@ -430,7 +426,7 @@ export default function FuturePlanning() {
                   </p>
                   <div className="space-y-2">
                     {selectedItems.recurring.map(b => (
-                      <div key={b.id} className="flex items-center justify-between gap-3 p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                      <div key={b.id} className="flex items-center justify-between gap-3 p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-2xl">
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{b.title}</p>
                           {b.notes && (
@@ -456,7 +452,7 @@ export default function FuturePlanning() {
       {/* Alert */}
       {chartData[0]?.budget > 0 && chartData[0]?.total > 0 && (chartData[0].total / chartData[0].budget) >= 0.7 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">
-          <Card className="border-0 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 shadow-lg">
+          <Card className="border-0 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500">
             <CardContent className="p-5 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
               <div>

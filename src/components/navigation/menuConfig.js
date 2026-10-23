@@ -117,3 +117,24 @@ export function mesaForPage(pageName, user) {
 export function itemUrl(item) {
   return createPageUrl(item.page);
 }
+
+// Títulos das páginas que não estão no menu (o resto vem do próprio item do menu).
+const EXTRA_TITLES = {
+  CreditCardInvoices: "Faturas",
+  CreditCardTransactions: "Compras do cartão",
+  ManualTransaction: "Lançamento manual",
+  PhotoTransaction: "Foto do comprovante",
+  VoiceTransaction: "Lançar por voz",
+  FileUploadTransaction: "Enviar arquivo",
+  ReviewImportedTransactions: "Revisar importação",
+  NewTransactionOptions: "Nova transação",
+};
+
+export function pageTitle(pageName) {
+  if (EXTRA_TITLES[pageName]) return EXTRA_TITLES[pageName];
+  for (const mesa of [...MESAS, ADMIN_MESA]) {
+    const item = mesa.items.find((i) => i.page === pageName);
+    if (item) return item.title;
+  }
+  return "Stama";
+}

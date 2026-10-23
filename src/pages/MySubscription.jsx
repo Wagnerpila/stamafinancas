@@ -5,10 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Star, Crown, MessageCircle, Check, X, ArrowLeft } from 'lucide-react';
+import { Star, Crown, MessageCircle, Check, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 
 export default function MySubscription() {
   const navigate = useNavigate();
@@ -69,19 +68,10 @@ Por favor, libere minha assinatura Premium. Obrigado!`;
   const isPremium = user.subscription_plan_name === 'premium';
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-4xl mx-auto">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(createPageUrl("Dashboard"))}
-            className="hover:bg-slate-100"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Minha Assinatura</h1>
             <p className="text-slate-600 dark:text-slate-300">Gerencie sua assinatura e acesse recursos premium</p>
           </div>
         </div>
@@ -89,7 +79,7 @@ Por favor, libere minha assinatura Premium. Obrigado!`;
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Status Atual */}
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+        <Card className=" dark:bg-slate-800">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 dark:text-white">
               {isPremium ? <Crown className="w-5 h-5 text-yellow-600" /> : <Star className="w-5 h-5" />}
@@ -115,7 +105,7 @@ Por favor, libere minha assinatura Premium. Obrigado!`;
 
         {/* Upgrade para Premium */}
         {!isPremium && (
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-orange-50">
+          <Card className="">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-orange-700">
                 <Crown className="w-5 h-5" />
@@ -129,7 +119,7 @@ Por favor, libere minha assinatura Premium. Obrigado!`;
                 </p>
                 <Button 
                   onClick={handleRequestPremium}
-                  className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700"
+                  className="w-full bg-gradient-to-r from-yellow-600 to-orange-600"
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Solicitar via WhatsApp
@@ -143,7 +133,7 @@ Por favor, libere minha assinatura Premium. Obrigado!`;
       {/* Recursos dos Planos */}
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         {/* Plano Gratuito */}
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+        <Card className=" dark:bg-slate-800">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 dark:text-white">
               <Star className="w-5 h-5" />
@@ -177,7 +167,7 @@ Por favor, libere minha assinatura Premium. Obrigado!`;
         </Card>
 
         {/* Plano Premium */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-orange-50">
+        <Card className="">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-orange-700">
               <Crown className="w-5 h-5" />

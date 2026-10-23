@@ -113,7 +113,7 @@ export default function CrediarioForm({ onSubmit, onCancel }) {
         <Button type="button" variant="outline" onClick={onCancel}>
           <X className="w-4 h-4 mr-2" /> Cancelar
         </Button>
-        <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
+        <Button type="submit" className="bg-brand-700 hover:bg-brand-800">
           <Save className="w-4 h-4 mr-2" /> Salvar
         </Button>
       </div>

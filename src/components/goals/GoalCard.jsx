@@ -52,7 +52,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddContribution, in
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
     >
-      <Card className={`border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 ${
+      <Card className={` dark:bg-slate-800/80 hover: transition-all duration-300 ${
         isCompleted ? 'ring-2 ring-emerald-200' : ''
       }`}>
         <CardHeader className="pb-3">
@@ -119,7 +119,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddContribution, in
           </div>
 
           {!isCompleted && (
-            <div className="text-sm text-slate-600 dark:text-slate-300 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+            <div className="text-sm text-slate-600 dark:text-slate-300 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl">
               <span>Projeção com saldo atual: </span>
               <span className={`font-bold ${projectedAmount >= (goal.current_amount || 0) ? 'text-blue-600' : 'text-red-600'}`}>
                 R$ {projectedAmount.toFixed(2)}
@@ -140,7 +140,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddContribution, in
           </div>
 
           {goal.monthly_contribution && !isCompleted && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
               <p className="text-sm text-blue-700 dark:text-blue-400">
                 <strong>Sugestão:</strong> Economize R$ {goal.monthly_contribution.toFixed(2)} por mês
               </p>
@@ -170,7 +170,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddContribution, in
                   />
                   <Button
                     onClick={handleAddContribution}
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-brand-700 hover:bg-brand-800"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -189,7 +189,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onAddContribution, in
           )}
 
           {isCompleted && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-center">
               <Trophy className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Meta Concluída!</p>
             </div>

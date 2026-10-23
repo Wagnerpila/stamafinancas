@@ -91,10 +91,9 @@ export default function CategoryBudgets() {
   if (loading) return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Previsão Orçamentária</h1>
           <p className="text-slate-600 dark:text-slate-300 mt-1">Defina limites mensais por categoria e acompanhe em tempo real</p>
         </div>
         <Button onClick={() => { setShowForm(true); setEditingBudget(null); setFormData({ category: "", monthly_limit: "" }); }} className="bg-blue-600 hover:bg-blue-700">
@@ -104,7 +103,7 @@ export default function CategoryBudgets() {
 
       {showForm && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80">
+          <Card className=" dark:bg-slate-800/80">
             <CardHeader>
               <CardTitle>{editingBudget ? "Editar Orçamento" : "Novo Orçamento por Categoria"}</CardTitle>
             </CardHeader>
@@ -140,7 +139,7 @@ export default function CategoryBudgets() {
       )}
 
       {budgets.length === 0 ? (
-        <Card className="border-0 shadow-lg">
+        <Card className="">
           <CardContent className="p-16 text-center">
             <Target className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-900 mb-2">Nenhum orçamento definido</h3>
@@ -159,7 +158,7 @@ export default function CategoryBudgets() {
               const colorClass = isOver ? "bg-red-500" : isWarning ? "bg-yellow-500" : FALLBACK_COLOR;
             return (
               <motion.div key={budget.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <Card className={`border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 ${isOver ? 'ring-2 ring-red-300' : isWarning ? 'ring-2 ring-yellow-300' : ''}`}>
+                <Card className={` dark:bg-slate-800/80 ${isOver ? 'ring-2 ring-red-300' : isWarning ? 'ring-2 ring-yellow-300' : ''}`}>
                   <CardContent className="p-5">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -184,7 +183,7 @@ export default function CategoryBudgets() {
                       </span>
                     </div>
                     {(isOver || isWarning) && (
-                      <div className={`mt-2 text-xs px-3 py-1.5 rounded-lg ${isOver ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'}`}>
+                      <div className={`mt-2 text-xs px-3 py-1.5 rounded-2xl ${isOver ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'}`}>
                         {isOver ? "⚠️ Limite ultrapassado nesta categoria!" : "⚠️ Atenção: mais de 80% do limite utilizado"}
                       </div>
                     )}

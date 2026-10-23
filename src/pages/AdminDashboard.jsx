@@ -73,12 +73,11 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-7xl mx-auto">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex items-center gap-4">
           <ShieldCheck className="w-10 h-10 text-blue-600" />
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Painel de Administração</h1>
             <p className="text-slate-600 dark:text-slate-300">Gerencie usuários e suas assinaturas.</p>
           </div>
         </div>
@@ -86,7 +85,7 @@ export default function AdminDashboard() {
 
       <WhatsAppBotPanel />
 
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+      <Card className=" dark:bg-slate-800">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Users /> Usuários</CardTitle>
         </CardHeader>

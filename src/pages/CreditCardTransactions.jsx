@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -108,13 +108,9 @@ export default function CreditCardTransactions() {
   const totalSpent = transactions.reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-7xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("CreditCards"))}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{card.name}</h1>
           <p className="text-slate-600 dark:text-slate-300">Lançamentos do cartão</p>
         </div>
         <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
@@ -123,19 +119,19 @@ export default function CreditCardTransactions() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="border-0 shadow-lg">
+        <Card className="">
           <CardContent className="p-6">
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Gasto Total</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">R$ {totalSpent.toFixed(2)}</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-lg">
+        <Card className="">
           <CardContent className="p-6">
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Disponível</p>
             <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">R$ {(card.limit - totalSpent).toFixed(2)}</p>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-lg">
+        <Card className="">
           <CardContent className="p-6">
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Transações</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{transactions.length}</p>
@@ -153,7 +149,7 @@ export default function CreditCardTransactions() {
         </motion.div>
       )}
 
-      <Card className="border-0 shadow-lg">
+      <Card className="">
         <CardHeader>
         <CardTitle className="dark:text-white">Transações</CardTitle>
         </CardHeader>
@@ -163,7 +159,7 @@ export default function CreditCardTransactions() {
           ) : (
             <div className="space-y-3">
               {transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <div key={tx.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl">
                        <div className="flex-1">
                         <p className="font-medium text-slate-900 dark:text-white">{tx.description}</p>
                         <p className="text-sm text-slate-600 dark:text-slate-400">

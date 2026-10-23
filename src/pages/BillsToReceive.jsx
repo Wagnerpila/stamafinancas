@@ -1,15 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { base44 } from "@/api/base44Client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Plus, CreditCard, Calendar, DollarSign, Clock } from "lucide-react";
-import { motion } from "framer-motion";
-import BillForm from "../components/bills/BillForm.jsx";
-import BillsList from "../components/bills/BillsList";
-import MonthFilter from "../components/common/MonthFilter";
 import { getBillsForMonth, getPaidRecurringIdsForMonth, findMatchingTransaction, buildBillEditAction } from "../components/lib/billRecurrence";
 import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
+import BillsPageView from "../components/bills/BillsPageView";
 
 export default function BillsToReceive() {
   const [bills, setBills] = useState([]);
@@ -263,131 +256,25 @@ export default function BillsToReceive() {
     return result;
   }, [bills, selectedDate, yearMode]);
 
-  const stats = useMemo(() => {
-    const pending = filteredBills.filter(b => b.status === 'pending');
-    const overdue = filteredBills.filter(b => {
-      if (b.status === 'paid') return false;
-      return new Date(b.due_date) < new Date();
-    });
-    const totalPending = pending.reduce((sum, b) => sum + b.amount, 0);
-
-    return {
-      total: filteredBills.length,
-      pending: pending.length,
-      overdue: overdue.length,
-      totalPending
-    };
-  }, [filteredBills]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Contas a Receber</h1>
-            <p className="text-slate-600 dark:text-slate-300">Acompanhe seus recebimentos e pendências</p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <MonthFilter
-              selectedDate={selectedDate}
-              onChange={setSelectedDate}
-              yearMode={yearMode}
-              onToggleYearMode={() => setYearMode(v => !v)}
-            />
-            <Button 
-              onClick={() => { setShowForm(true); setEditingBill(null); }}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Nova Conta
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <CreditCard className="w-8 h-8 text-slate-600 dark:text-slate-400" />
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Total de Contas</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.total}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <Clock className="w-8 h-8 text-yellow-600" />
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Pendentes</p>
-                  <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-8 h-8 text-red-600" />
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Em Atraso</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <DollarSign className="w-8 h-8 text-emerald-600" />
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Valor a Receber</p>
-                  <p className="text-2xl font-bold text-emerald-600">R$ {stats.totalPending.toFixed(2)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </motion.div>
-
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditingBill(null); } }}>
-        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingBill ? 'Editar Conta a Receber' : 'Nova Conta a Receber'}</DialogTitle>
-          </DialogHeader>
-          <BillForm
-            bill={editingBill ? { ...editingBill, type: 'receivable' } : { type: 'receivable' }}
-            onSubmit={handleSubmit}
-            onCancel={() => { setShowForm(false); setEditingBill(null); }}
-            billType="receivable"
-          />
-        </DialogContent>
-      </Dialog>
-
-      <BillsList
-        bills={filteredBills}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onMarkAsPaid={handleMarkAsPaid}
-        type="receivable"
-      />
-    </div>
+    <BillsPageView
+      type="receivable"
+      loading={loading}
+      bills={filteredBills}
+      selectedDate={selectedDate}
+      onChangeDate={setSelectedDate}
+      yearMode={yearMode}
+      onToggleYearMode={() => setYearMode(v => !v)}
+      showForm={showForm}
+      editingBill={editingBill}
+      onOpenNew={() => { setShowForm(true); setEditingBill(null); }}
+      onCloseForm={() => { setShowForm(false); setEditingBill(null); }}
+      onSubmit={handleSubmit}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onMarkAsPaid={handleMarkAsPaid}
+      getPurchaseNote={undefined}
+    />
   );
 }

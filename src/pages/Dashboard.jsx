@@ -329,7 +329,7 @@ export default function Dashboard() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="mt-8"
         >
-          <Card className="border-2 shadow-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-800">
+          <Card className="border-2">
             <CardContent className="p-6">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Compartilhe e Compare</h2>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">

@@ -55,7 +55,7 @@ export default function WipeUserDataPanel({ users = [], currentUser }) {
   };
 
   return (
-    <Card className="border-2 border-red-200 dark:border-red-900/50 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+    <Card className="border-2 border-red-200 dark:border-red-900/50 dark:bg-slate-800">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
           <AlertTriangle className="w-5 h-5" /> Zona de Risco — Fase de Desenvolvimento

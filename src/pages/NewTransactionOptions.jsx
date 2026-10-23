@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Keyboard, Camera, Upload, Mic, ArrowLeft, FileUp, Lock } from "lucide-react";
+import { Keyboard, Camera, Upload, Mic, FileUp, Lock } from "lucide-react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { base44 } from '@/api/base44Client';
+import { ChevronRight } from "lucide-react";
+import { AgentBubble } from "../components/agents/agents";
+import { StatusBadge } from "../components/stama/kit";
 
 const options = [
   {
@@ -87,7 +87,7 @@ export default function NewTransactionOptions() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-3xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -95,74 +95,40 @@ export default function NewTransactionOptions() {
         className="mb-8"
       >
         <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(createPageUrl("Dashboard"))}
-            className="hover:bg-slate-100"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Adicionar Nova Transação</h1>
             <p className="text-slate-600 dark:text-slate-300">Escolha como você quer registrar sua movimentação.</p>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {options.map((option, index) => {
+      <div className="mb-5">
+        <AgentBubble agent="bia">
+          o jeito mais rápido é me mandar no WhatsApp — "gastei 62 na farmácia" e pronto. Mas dá pra lançar por aqui também:
+        </AgentBubble>
+      </div>
+
+      <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900">
+        {options.map((option) => {
           const isLocked = option.premium && !isPremiumUser();
-          
           return (
-            <motion.div
+            <Link
               key={option.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
+              to={isLocked ? "#" : option.url}
+              onClick={(e) => handleOptionClick(option, e)}
+              className={`group flex items-center gap-4 border-b border-slate-100 px-5 py-4 last:border-0 dark:border-slate-800 ${isLocked ? "opacity-60" : "hover:bg-slate-50 dark:hover:bg-slate-800"}`}
             >
-              <Link 
-                to={isLocked ? "#" : option.url}
-                onClick={(e) => handleOptionClick(option, e)}
-              >
-                <Card className={`h-full border-0 shadow-lg bg-white/80 backdrop-blur-sm transition-all duration-300 ${
-                  isLocked 
-                    ? 'opacity-60 cursor-not-allowed' 
-                    : 'hover:shadow-xl hover:-translate-y-1'
-                }`}>
-                  <CardHeader className="flex flex-row items-center gap-4">
-                    <div className={`p-4 rounded-xl ${option.bg} relative`}>
-                      <option.icon className={`w-6 h-6 ${option.color}`} />
-                      {isLocked && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-xl">
-                          <Lock className="w-5 h-5 text-slate-500" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className={`text-lg font-bold ${option.color}`}>
-                          {option.title}
-                        </CardTitle>
-                        {option.premium && (
-                          <Badge variant="secondary" className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
-                            Premium
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-slate-600">{option.description}</p>
-                    {isLocked && (
-                      <p className="text-sm text-orange-600 mt-2 font-medium">
-                        🔒 Contate o administrador para upgrade
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                {isLocked ? <Lock className="h-5 w-5" /> : <option.icon className="h-5 w-5" strokeWidth={1.75} />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="font-display text-[17px] font-semibold text-slate-900 dark:text-white">{option.title}</span>
+                  {option.premium && <StatusBadge tone="orange">Premium</StatusBadge>}
+                </span>
+                <span className="block text-sm text-slate-500">{isLocked ? "Disponível no plano Premium" : option.description}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
+            </Link>
           );
         })}
       </div>

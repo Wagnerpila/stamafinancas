@@ -30,11 +30,11 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border-0">
+        <div className=" dark:bg-slate-900/90 rounded-2xl shadow-2xl p-8 border-0">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-xl overflow-hidden mx-auto mb-4 shadow-lg">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4">
               <img src={stamaLogo} alt="STAMA" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Esqueci minha senha</h1>
@@ -72,7 +72,7 @@ export default function ForgotPassword() {
               </div>
 
               {error && (
-                <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>
+                <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-2xl px-3 py-2">{error}</p>
               )}
 
               <Button type="submit" disabled={loading} className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 gap-2">

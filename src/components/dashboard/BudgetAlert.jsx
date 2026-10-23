@@ -27,7 +27,7 @@ export default function BudgetAlert({ currentSpending, monthlyBudget, show }) {
         transition={{ duration: 0.3 }}
         className="mb-6"
       >
-        <Alert variant={isOverBudget ? "destructive" : "default"} className={`${isOverBudget ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'} shadow-lg`}>
+        <Alert variant={isOverBudget ? "destructive" : "default"} className={`${isOverBudget ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
           <AlertTriangle className={`h-5 w-5 ${isOverBudget ? 'text-red-600' : 'text-amber-600'}`} />
           <AlertDescription className="flex items-center justify-between">
             <div>

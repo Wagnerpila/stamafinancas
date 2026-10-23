@@ -58,7 +58,7 @@ export default function WhatsAppBotPanel() {
   const state = status?.status || "disconnected";
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm mb-8">
+    <Card className=" dark:bg-slate-800 mb-8">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-green-600" /> Bot do WhatsApp
@@ -96,7 +96,7 @@ export default function WhatsAppBotPanel() {
 
         {state === "qr" && status?.qrDataUrl && (
           <div className="flex flex-col items-center gap-2 py-2">
-            <img src={status.qrDataUrl} alt="QR Code do WhatsApp" className="w-56 h-56 border rounded-lg" />
+            <img src={status.qrDataUrl} alt="QR Code do WhatsApp" className="w-56 h-56 border rounded-2xl" />
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Abra o WhatsApp no celular do número que será o bot → Configurações → Aparelhos conectados → Conectar aparelho.
             </p>
@@ -105,7 +105,7 @@ export default function WhatsAppBotPanel() {
 
         <div className="flex gap-3">
           {state === "disconnected" && (
-            <Button onClick={handleConnect} disabled={busy} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={handleConnect} disabled={busy} className="bg-brand-700 hover:bg-brand-800">
               {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Conectar WhatsApp
             </Button>

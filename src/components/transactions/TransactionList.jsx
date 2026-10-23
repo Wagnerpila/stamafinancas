@@ -62,10 +62,10 @@ export default function TransactionList({ transactions, onEdit, onDelete, onDele
 
   const TransactionCard = ({ transaction }) => (
     <Card
-      className={`mb-3 backdrop-blur-sm border-0 shadow-md transition-all cursor-pointer ${
+      className={`mb-3 transition-all cursor-pointer ${
         selected.includes(transaction.id)
           ? 'bg-red-50 dark:bg-red-900/20 ring-2 ring-red-400'
-          : 'bg-white/80 dark:bg-slate-800/80'
+          : ' dark:bg-slate-800/80'
       }`}
       onClick={() => toggleSelect(transaction.id)}
     >
@@ -176,7 +176,7 @@ export default function TransactionList({ transactions, onEdit, onDelete, onDele
 
       {/* Desktop View */}
       <div className="hidden md:block">
-        <Card className="overflow-hidden border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+        <Card className="overflow-hidden dark:bg-slate-800/80">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 dark:bg-slate-700/50">
               <tr>

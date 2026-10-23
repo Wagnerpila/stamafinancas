@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { MessageCircle, ArrowLeft } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -43,7 +43,7 @@ function WhatsAppSettings() {
   };
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm mt-8">
+    <Card className=" dark:bg-slate-800 mt-8">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="w-6 h-6 text-green-600" />
@@ -82,23 +82,14 @@ export default function NotificationSettings() {
   const navigate = useNavigate();
   
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-4xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
         <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(createPageUrl("Dashboard"))}
-            className="hover:bg-slate-100"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Configurações de Alertas</h1>
             <p className="text-slate-600 dark:text-slate-300">Configure quando e como receber notificações sobre suas finanças</p>
           </div>
         </div>

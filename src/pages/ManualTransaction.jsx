@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { Transaction } from "@/entities/Transaction";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowLeft, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CheckCircle } from "lucide-react";
 import TransactionForm from "../components/forms/TransactionForm";
 import { motion } from "framer-motion";
 
@@ -38,7 +37,7 @@ export default function ManualTransaction() {
 
   if (success) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto">
+      <div className="px-4 py-5 lg:px-8 max-w-2xl mx-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -56,7 +55,7 @@ export default function ManualTransaction() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-2xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -64,16 +63,7 @@ export default function ManualTransaction() {
         className="mb-8"
       >
         <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(createPageUrl("NewTransactionOptions"))}
-            className="hover:bg-slate-100"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{initialData ? 'Revisar Transação' : 'Entrada Manual'}</h1>
             <p className="text-slate-600 dark:text-slate-300">{initialData ? 'Confirme os dados extraídos' : 'Adicione uma nova receita ou despesa'}</p>
           </div>
         </div>

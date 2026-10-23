@@ -44,7 +44,7 @@ export default function RecentTransactions({ transactions = [] }) {
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
     >
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+      <Card className=" dark:bg-slate-800/80">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Clock className="w-5 h-5" />
@@ -74,7 +74,7 @@ export default function RecentTransactions({ transactions = [] }) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-full ${

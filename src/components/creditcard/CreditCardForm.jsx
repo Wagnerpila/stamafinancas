@@ -103,8 +103,8 @@ export default function CreditCardForm({ card, onSubmit, onCancel }) {
               type="button"
               title={opt.label}
               onClick={() => setFormData({ ...formData, color_index: opt.index })}
-              className={`w-10 h-10 rounded-xl ${opt.preview} flex items-center justify-center transition-all ring-2 ${
-                formData.color_index === opt.index ? "ring-white scale-110 shadow-lg" : "ring-transparent opacity-70 hover:opacity-100"
+              className={`w-10 h-10 rounded-2xl ${opt.preview} flex items-center justify-center transition-all ring-2 ${
+                formData.color_index === opt.index ? "ring-white scale-110" : "ring-transparent opacity-70 hover:opacity-100"
               }`}
             >
               {formData.color_index === opt.index && <Check className="w-4 h-4 text-white" />}

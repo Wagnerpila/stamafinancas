@@ -27,7 +27,7 @@ export default class ErrorBoundary extends React.Component {
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium text-sm"
+            className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-medium text-sm"
           >
             Recarregar
           </button>

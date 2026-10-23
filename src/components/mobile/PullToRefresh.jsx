@@ -77,7 +77,7 @@ export default function PullToRefresh({ onRefresh, children }) {
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-0 left-1/2 transform -translate-x-1/2 z-50"
           >
-            <div className="bg-white rounded-full p-3 shadow-lg">
+            <div className="bg-white rounded-full p-3">
               <RefreshCw
                 className="w-6 h-6 text-blue-600"
                 style={{

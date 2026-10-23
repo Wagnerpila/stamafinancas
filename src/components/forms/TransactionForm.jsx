@@ -278,7 +278,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+      <Card className=" dark:bg-slate-800">
         <CardHeader>
           <CardTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             {formData.type === 'income' ? (
@@ -401,7 +401,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
 
             {/* Budget Alert for selected category */}
             {formData.type === 'expense' && formData.category && categoryBudget && (
-              <div className={`p-4 rounded-lg border ${(categorySpent + parseFloat(formData.amount || 0)) > categoryBudget.monthly_limit ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : categorySpent / categoryBudget.monthly_limit >= 0.8 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'}`}>
+              <div className={`p-4 rounded-2xl border ${(categorySpent + parseFloat(formData.amount || 0)) > categoryBudget.monthly_limit ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : categorySpent / categoryBudget.monthly_limit >= 0.8 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'}`}>
                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-1">Orçamento: {formData.category}</p>
                  <div className="w-full bg-white dark:bg-slate-600 rounded-full h-2 mb-1">
                    <div className={`h-2 rounded-full ${(categorySpent + parseFloat(formData.amount || 0)) > categoryBudget.monthly_limit ? 'bg-red-500' : 'bg-blue-500'}`}
@@ -448,7 +448,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
 
             {/* Card Limit Alert */}
             {formData.payment_method === 'credit_card' && formData.credit_card_id && cardLimit && (
-              <div className={`p-4 rounded-lg border ${
+              <div className={`p-4 rounded-2xl border ${
                 (cardLimit.used + parseFloat(formData.amount || 0)) > cardLimit.total 
                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' 
                   : cardLimit.available < cardLimit.total * 0.2
@@ -480,7 +480,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
             )}
 
             {formData.type === 'expense' && (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
                 <div className="space-y-0.5">
                   <Label htmlFor="food-voucher" className="font-medium text-slate-900 dark:text-slate-100">
                     Pago com Vale Alimentação
@@ -499,7 +499,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
 
             {/* Repeat transaction toggle */}
             {!initialData && (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
                 <div className="space-y-0.5">
                   <Label htmlFor="repeat-transaction" className="font-medium text-slate-900 dark:text-slate-100">Repetir Transação</Label>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -533,7 +533,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
 
             {/* Create Bill toggle */}
             {formData.type === 'expense' && (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600">
                 <div className="space-y-0.5">
                   <Label htmlFor="create-bill" className="font-medium text-slate-900 dark:text-slate-100">Gerar Conta a Pagar</Label>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Vincular esta despesa a uma conta a pagar futura</p>
@@ -551,7 +551,7 @@ export default function TransactionForm({ onSubmit, isSubmitting = false, initia
 
             {/* Create Receivable toggle */}
             {formData.type === 'income' && (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
                 <div className="space-y-0.5">
                   <Label htmlFor="create-receivable" className="font-medium text-slate-900 dark:text-slate-100">Gerar Conta a Receber</Label>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Vincular esta receita a uma conta a receber futura</p>

@@ -32,7 +32,7 @@ export default function FoodVoucherConfig({ user, onUpdate }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-amber-50 backdrop-blur-sm">
+      <Card className="">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-orange-900">
             <ShoppingCart className="w-5 h-5" />
@@ -54,7 +54,7 @@ export default function FoodVoucherConfig({ user, onUpdate }) {
             <Button 
               onClick={handleSave} 
               disabled={isSaving || balance === ''}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-brand-700 hover:bg-brand-800"
             >
               {isSaving ? 'Salvando...' : <><Save className="w-4 h-4 mr-2" /> Salvar</>}
             </Button>

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
-import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import { parseISO } from 'date-fns';
-import { ArrowLeft, Plus, Pencil, Trash2, ArrowUpRight, ArrowDownRight, Target, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, Target, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
 import MonthFilter from '../components/common/MonthFilter';
+import { usePageHeader, FilterChips } from "../components/stama/kit";
 
 const DEFAULT_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899','#6366f1'];
 
@@ -198,6 +198,8 @@ export default function TransactionCategories() {
     setBudgets(prev => prev.filter(b => b.category !== cat.name));
   };
 
+  usePageHeader({ title: "Categorias", subtitle: `${categories.filter((c) => c.active !== false).length} categorias`, onAdd: openNew, addLabel: "Nova categoria" });
+
   const filtered = categories.filter(c => c.type === activeTab && c.active !== false);
 
   const matchesPeriod = (d) => yearMode
@@ -246,15 +248,11 @@ export default function TransactionCategories() {
   const formatBRL = (v) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-4xl mx-auto">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-2">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("Dashboard"))}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Categorias</h1>
               <p className="text-slate-600 dark:text-slate-300">Gerencie categorias e orçamentos mensais</p>
             </div>
           </div>
@@ -269,31 +267,15 @@ export default function TransactionCategories() {
         </div>
       </motion.div>
 
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab('expense')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-            activeTab === 'expense'
-              ? 'bg-red-600 text-white shadow-md'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-          }`}
-        >
-          <ArrowDownRight className="w-4 h-4" /> Despesas
-        </button>
-        <button
-          onClick={() => setActiveTab('income')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-            activeTab === 'income'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-          }`}
-        >
-          <ArrowUpRight className="w-4 h-4" /> Receitas
-        </button>
-        <div className="flex-1" />
-        <Button onClick={openNew} className="bg-blue-600 hover:bg-blue-700 gap-2">
-          <Plus className="w-4 h-4" /> Nova Categoria
-        </Button>
+      <div className="mb-6">
+        <FilterChips
+          value={activeTab}
+          onChange={setActiveTab}
+          options={[
+            { value: "expense", label: "Despesas", count: categories.filter((c) => c.type === "expense" && c.active !== false).length },
+            { value: "income", label: "Receitas", count: categories.filter((c) => c.type === "income" && c.active !== false).length },
+          ]}
+        />
       </div>
 
       {loading ? (
@@ -313,11 +295,11 @@ export default function TransactionCategories() {
 
             return (
               <motion.div key={cat.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                <Card className={`border-0 shadow-md bg-white dark:bg-slate-800 hover:shadow-lg transition-shadow ${isOver ? 'ring-2 ring-red-400' : isWarning ? 'ring-2 ring-yellow-400' : ''}`}>
+                <Card className={` bg-white dark:bg-slate-800 hover: transition-shadow ${isOver ? 'ring-2 ring-red-400' : isWarning ? 'ring-2 ring-yellow-400' : ''}`}>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4 mb-3">
                       <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
                         style={{ backgroundColor: (cat.color || '#3b82f6') + '22' }}
                       >
                         {cat.icon || '📦'}
@@ -464,7 +446,7 @@ export default function TransactionCategories() {
 
             <div className="space-y-1.5">
               <Label className="dark:text-slate-200">Emoji / Ícone</Label>
-              <div className="border border-input dark:border-slate-600 rounded-lg p-2 max-h-36 overflow-y-auto bg-white dark:bg-slate-700">
+              <div className="border border-input dark:border-slate-600 rounded-2xl p-2 max-h-36 overflow-y-auto bg-white dark:bg-slate-700">
                 <div className="grid grid-cols-10 gap-1">
                   {EMOJI_LIST.map(emoji => (
                     <button
@@ -487,7 +469,7 @@ export default function TransactionCategories() {
                   type="color"
                   value={form.color}
                   onChange={e => setForm(p => ({ ...p, color: e.target.value }))}
-                  className="w-10 h-10 rounded-lg cursor-pointer border border-slate-200"
+                  className="w-10 h-10 rounded-2xl cursor-pointer border border-slate-200"
                 />
                 <div className="flex flex-wrap gap-2">
                   {DEFAULT_COLORS.map(c => (
@@ -502,8 +484,8 @@ export default function TransactionCategories() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ backgroundColor: form.color + '33' }}>
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-700">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl" style={{ backgroundColor: form.color + '33' }}>
                 {form.icon || '📦'}
               </div>
               <span className="font-medium text-slate-800 dark:text-white">{form.name || 'Nome da categoria'}</span>

@@ -47,7 +47,7 @@ export default function TransactionFilters({ filters, onFiltersChange, cards = [
   );
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm mb-6">
+    <Card className=" dark:bg-slate-800/80 mb-6">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">

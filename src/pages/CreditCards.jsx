@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { CreditCard as CreditCardIcon, Plus, Edit2, Trash2, FileText, ScanLine } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
+import { Plus, Edit2, Trash2, FileText, ScanLine, Loader2 } from "lucide-react";
+import { usePageHeader, PageBody, Panel, StatCard, StatGrid, StatusBadge, ThinBar, PillButton, RoundButton, brl } from "../components/stama/kit";
 import CreditCardForm from "../components/creditcard/CreditCardForm.jsx";
 import InvoiceOCRDialog from "../components/creditcard/InvoiceOCRDialog.jsx";
 
@@ -118,157 +116,108 @@ export default function CreditCards() {
     }
   };
 
+  const totalLimit = cardsWithBalance.reduce((s, c) => s + (c.limit || 0), 0);
+  const totalUsed = cardsWithBalance.reduce((s, c) => s + (c.usedLimit || 0), 0);
+  const openNew = useCallback(() => { setShowForm(true); setEditingCard(null); }, []);
+  usePageHeader({ title: "Cartões", subtitle: `${cards.length} cart${cards.length === 1 ? "ão" : "ões"}`, onAdd: openNew, addLabel: "Novo cartão" });
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Cartões de Crédito</h1>
-          <p className="text-slate-600 dark:text-slate-300">Gerencie seus cartões e faturas</p>
-        </div>
-        <Button onClick={() => { setShowForm(true); setEditingCard(null); }} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-5 h-5 mr-2" /> Novo Cartão
-        </Button>
-      </div>
-
+    <PageBody>
       <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditingCard(null); } }}>
-        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingCard ? 'Editar Cartão' : 'Novo Cartão'}</DialogTitle>
+            <DialogTitle>{editingCard ? "Editar cartão" : "Novo cartão"}</DialogTitle>
           </DialogHeader>
-          <CreditCardForm
-            card={editingCard}
-            onSubmit={handleSubmit}
-            onCancel={() => { setShowForm(false); setEditingCard(null); }}
-          />
+          <CreditCardForm card={editingCard} onSubmit={handleSubmit} onCancel={() => { setShowForm(false); setEditingCard(null); }} />
         </DialogContent>
       </Dialog>
 
-      {ocrCard && (
-        <InvoiceOCRDialog
-          open={!!ocrCard}
-          card={ocrCard}
-          onClose={() => setOcrCard(null)}
-          onImportSuccess={loadCards}
-        />
-      )}
+      {ocrCard && <InvoiceOCRDialog open={!!ocrCard} card={ocrCard} onClose={() => setOcrCard(null)} onImportSuccess={loadCards} />}
 
       {cards.length === 0 ? (
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-12 text-center">
-            <CreditCardIcon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">Nenhum cartão cadastrado</h3>
-            <p className="text-slate-600 mb-6">Adicione seu primeiro cartão de crédito</p>
-            <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-5 h-5 mr-2" /> Adicionar Cartão
-            </Button>
-          </CardContent>
-        </Card>
+        <Panel>
+          <button
+            type="button"
+            onClick={openNew}
+            className="flex w-full flex-col items-center gap-3 rounded-3xl border border-dashed border-slate-300 px-6 py-14 text-center transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-500 dark:border-slate-600">
+              <Plus className="h-5 w-5" />
+            </span>
+            <span className="font-display text-xl font-semibold text-slate-900 dark:text-white">adicionar seu primeiro cartão</span>
+            <span className="max-w-xs text-slate-500">limite, fechamento e fatura acompanhados pela Bia</span>
+          </button>
+          <p className="mt-5 text-center text-slate-500">
+            Tem a fatura em PDF? Depois de cadastrar, use <strong className="text-slate-700 dark:text-slate-200">Ler fatura</strong> e a Bia lança tudo.
+          </p>
+        </Panel>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cardsWithBalance.map((card, index) => {
-            const grad = getGradient(card.color_index ?? index);
-            const usedPct = card.limit > 0 ? (card.usedLimit / card.limit) * 100 : 0;
-            const freePct = 100 - usedPct;
-            return (
-              <motion.div key={card.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                <Card className={`border-0 shadow-xl bg-gradient-to-br ${grad.bg} text-white overflow-hidden`}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-lg ${grad.badge} flex items-center justify-center shadow`}>
-                          <CreditCardIcon className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-lg">{card.name}</span>
-                      </div>
-                      {!card.active && <span className="text-xs bg-red-500 px-2 py-1 rounded-full">Inativo</span>}
-                    </CardTitle>
-                    {card.last_digits && (
-                      <p className="text-sm text-white/60 tracking-widest mt-1">**** **** **** {card.last_digits}</p>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 mb-4">
-                      <p className="text-base font-bold">Limite: R$ {card.limit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-white/70">Usado este mês:</span>
-                        <span className="text-red-300 font-semibold">R$ {card.usedLimit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-white/70">Disponível:</span>
-                        <span className="text-green-300 font-bold">R$ {card.availableLimit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="w-full bg-white/20 rounded-full h-2 mt-2">
-                        <div
-                          className={`bg-gradient-to-r ${grad.bar} h-2 rounded-full transition-all duration-500`}
-                          style={{ width: `${Math.min(usedPct, 100)}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-white/50 mt-1">
-                        <span>{usedPct.toFixed(0)}% usado</span>
-                        <span>{freePct.toFixed(0)}% livre</span>
-                      </div>
-                      <p className="text-xs text-white/60 pt-2 border-t border-white/10">
-                        Fecha dia {card.closing_day} • Vence dia {card.due_day}
+        <>
+          <StatCard label="Limite disponível" value={Math.max(0, totalLimit - totalUsed)} tone="positive" size="lg" hint={`de R$ ${brl(totalLimit)} no total`} />
+          <StatGrid>
+            <StatCard label="Comprometido" value={totalUsed} hint="faturas + parcelas" />
+            <StatCard label="Uso do limite" value={`${totalLimit ? Math.round((totalUsed / totalLimit) * 100) : 0}%`} money={false} tone={totalLimit && totalUsed / totalLimit > 0.8 ? "warning" : "neutral"} />
+          </StatGrid>
+
+          <p className="section-label !text-slate-500 pt-2">Seus cartões</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {cardsWithBalance.map((card, index) => {
+              const grad = getGradient(card.color_index ?? index);
+              const usedPct = card.limit > 0 ? (card.usedLimit / card.limit) * 100 : 0;
+              const raw = cards.find((c) => c.id === card.id) || card;
+              return (
+                <Panel key={card.id} className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <span className={`flex h-12 w-[4.5rem] shrink-0 items-end justify-end rounded-xl bg-gradient-to-br ${grad.bg} p-1.5 shadow-sm`}>
+                      <span className="font-mono text-[10px] text-white/80">{card.last_digits ? `•${card.last_digits}` : ""}</span>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-display text-lg font-semibold text-slate-900 dark:text-white">{card.name}</p>
+                      <p className="text-xs font-medium uppercase tracking-[0.15em] text-slate-500">
+                        fecha dia {card.closing_day} · vence dia {card.due_day}
                       </p>
                     </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
-                        onClick={() => navigate(createPageUrl("CreditCardInvoices") + `?card=${card.id}`)}
-                      >
-                        <FileText className="w-4 h-4 mr-1" /> Faturas
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
-                        onClick={() => setOcrCard(card)}
-                        title="Ler fatura via OCR (PDF ou imagem)"
-                      >
-                        <ScanLine className="w-4 h-4 mr-1" /> OCR
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-white/70 hover:text-white hover:bg-white/10"
-                        onClick={() => {
-                          // `card` aqui vem de cardsWithBalance, que injeta availableLimit/usedLimit
-                          // (calculateAvailableLimit) só para exibição. Se esses campos calculados
-                          // fossem parar no form e voltarem no update, o backend rejeita o payload
-                          // por trazer campos que não existem na entidade CreditCard — e o Salvar
-                          // parecia simplesmente não fazer nada. Usa o cartão "cru" de `cards`.
-                          setEditingCard(cards.find(c => c.id === card.id) || card);
-                          setShowForm(true);
-                        }}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-white/70 hover:text-red-300 hover:bg-white/10"
-                        onClick={() => handleDelete(card.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    {!card.active && <StatusBadge tone="gray">Inativo</StatusBadge>}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-display text-2xl font-bold text-slate-900 dark:text-white">R$ {brl(card.usedLimit)}</span>
+                      <span className="text-sm text-slate-500">de R$ {brl(card.limit)}</span>
                     </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+                    <ThinBar pct={usedPct} tone="auto" />
+                    <p className="text-sm text-slate-500">
+                      disponível <strong className="text-brand-700 dark:text-brand-300">R$ {brl(card.availableLimit)}</strong> · {usedPct.toFixed(0)}% usado
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <PillButton tone="dark" className="flex-1" onClick={() => navigate(createPageUrl("CreditCardInvoices") + `?card=${card.id}`)}>
+                      <FileText className="h-4 w-4" /> Faturas
+                    </PillButton>
+                    <PillButton tone="outline" className="flex-1" onClick={() => setOcrCard(card)}>
+                      <ScanLine className="h-4 w-4" /> Ler fatura
+                    </PillButton>
+                    {/* Edita o cartão "cru" (sem availableLimit/usedLimit calculados, que o backend rejeita no update). */}
+                    <RoundButton label="Editar" onClick={() => { setEditingCard(raw); setShowForm(true); }} className="h-10 w-10">
+                      <Edit2 className="h-4 w-4" />
+                    </RoundButton>
+                    <RoundButton label="Excluir" onClick={() => handleDelete(card.id)} className="h-10 w-10 hover:!text-red-600">
+                      <Trash2 className="h-4 w-4" />
+                    </RoundButton>
+                  </div>
+                </Panel>
+              );
+            })}
+          </div>
+        </>
       )}
-    </div>
+    </PageBody>
   );
 }

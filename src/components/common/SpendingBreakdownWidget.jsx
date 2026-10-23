@@ -24,7 +24,7 @@ export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGr
   const amountColorClass = positive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400";
 
   return (
-    <Card className="border-0 shadow-lg">
+    <Card className="">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold dark:text-white flex items-center gap-2">
           {icon}
@@ -43,7 +43,7 @@ export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGr
               const isExpanded = expandedKey === g.key;
               const items = itemsByGroup[g.key] || [];
               return (
-                <div key={g.key} className="bg-slate-50 dark:bg-slate-700/50 rounded-xl overflow-hidden">
+                <div key={g.key} className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setExpandedKey(prev => (prev === g.key ? null : g.key))}
@@ -51,7 +51,7 @@ export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGr
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
+                        className="w-9 h-9 rounded-2xl flex items-center justify-center text-lg shrink-0"
                         style={{ backgroundColor: (g.color || "#3b82f6") + "22" }}
                       >
                         {g.icon || "💳"}
@@ -81,7 +81,7 @@ export default function SpendingBreakdownWidget({ title, icon, groups, itemsByGr
                     <div className="border-t border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-3 animate-in fade-in duration-200">
                       <div className="space-y-1.5 max-h-64 overflow-y-auto">
                         {items.map(item => (
-                          <div key={item.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                          <div key={item.id} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50">
                             <div className="min-w-0">
                               <span className="text-sm text-slate-700 dark:text-slate-200 truncate block">{item.description}</span>
                               {item.notes && (

@@ -271,7 +271,7 @@ export default function NotificationManager() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6 max-w-2xl mx-auto p-4 sm:p-6 lg:p-8"
     >
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+      <Card className="">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Bell className="w-5 h-5" />
@@ -279,7 +279,7 @@ export default function NotificationManager() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl border">
             <div className="flex items-start sm:items-center gap-3 mb-4 sm:mb-0">
               {permissions === 'granted' ? (
                 <Bell className="w-6 h-6 text-green-600 flex-shrink-0" />
@@ -302,7 +302,7 @@ export default function NotificationManager() {
 
           {settings && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg bg-slate-50">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-2xl bg-slate-50">
                 <div className="flex items-center gap-3 mb-2 sm:mb-0">
                   <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0" />
                   <span className="text-base sm:text-md">Alertar contas com vencimento em:</span>
@@ -322,7 +322,7 @@ export default function NotificationManager() {
                 </select>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg bg-slate-50">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-2xl bg-slate-50">
                 <div className="flex items-center gap-3 mb-2 sm:mb-0">
                   <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
                   <span className="text-base sm:text-md">Lembrar contas em atraso</span>

@@ -119,7 +119,7 @@ export default function SubscriptionAdmin() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-7xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -127,7 +127,6 @@ export default function SubscriptionAdmin() {
       >
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Planos de Assinatura</h1>
             <p className="text-slate-600 dark:text-slate-300">Configure os planos disponíveis e suas funcionalidades</p>
           </div>
         </div>
@@ -149,7 +148,7 @@ export default function SubscriptionAdmin() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
           >
-            <Card className={`border-0 shadow-xl bg-white/90 dark:bg-slate-800 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 ${
+            <Card className={` dark:bg-slate-800 hover:shadow-2xl transition-all duration-300 ${
               plan.plan_name === 'premium' ? 'ring-2 ring-purple-300 scale-105' : ''
             }`}>
               <CardHeader className="text-center pb-2">
@@ -190,7 +189,7 @@ export default function SubscriptionAdmin() {
                   <h4 className="font-semibold text-slate-900 dark:text-white mb-3 text-center">Funcionalidades Incluídas:</h4>
                   <div className="space-y-3">
                     {Object.entries(plan.features || {}).map(([feature, enabled]) => (
-                      <div key={feature} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-700">
+                      <div key={feature} className="flex items-center justify-between p-2 rounded-2xl bg-slate-50 dark:bg-slate-700">
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                           {featureLabels[feature]}
                         </span>
@@ -206,7 +205,7 @@ export default function SubscriptionAdmin() {
                 </div>
                 
                 <div className="pt-4 border-t text-center">
-                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-2xl">
                     <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                       Limite de Transações:
                     </span>
@@ -220,14 +219,14 @@ export default function SubscriptionAdmin() {
                 </div>
 
                 {plan.plan_name === 'premium' && (
-                  <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                  <div className="text-center p-4 rounded-2xl border border-purple-200">
                     <p className="text-sm font-semibold text-purple-700 mb-1">🎯 Mais Popular</p>
                     <p className="text-xs text-purple-600">Ideal para controle financeiro completo</p>
                   </div>
                 )}
 
                 {plan.plan_name === 'free' && (
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-center p-4 bg-gray-50 rounded-2xl">
                     <p className="text-sm font-semibold text-gray-700 mb-1">🚀 Comece Grátis</p>
                     <p className="text-xs text-gray-600">Perfeito para começar a organizar suas finanças</p>
                   </div>
@@ -239,7 +238,7 @@ export default function SubscriptionAdmin() {
       </div>
 
       <div className="mt-12 text-center">
-        <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-purple-50 max-w-2xl mx-auto">
+        <Card className=" max-w-2xl mx-auto">
           <CardContent className="p-6">
             <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">💡 Recomendação</h3>
             <p className="text-slate-600 dark:text-slate-300">
@@ -294,7 +293,7 @@ function PlanEditor({ plan, onSave, onCancel }) {
       animate={{ opacity: 1, y: 0 }}
       className="mb-8"
     >
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+      <Card className=" dark:bg-slate-800">
         <CardHeader>
           <CardTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Settings className="w-5 h-5" />
@@ -356,7 +355,7 @@ function PlanEditor({ plan, onSave, onCancel }) {
               <h4 className="font-semibold text-slate-900 dark:text-white">Funcionalidades</h4>
               <div className="grid md:grid-cols-2 gap-4">
                 {Object.entries(featureLabels).map(([feature, label]) => (
-                  <div key={feature} className="flex items-center justify-between p-3 rounded-lg border dark:border-slate-600 dark:bg-slate-700">
+                  <div key={feature} className="flex items-center justify-between p-3 rounded-2xl border dark:border-slate-600 dark:bg-slate-700">
                     <Label htmlFor={feature}>{label}</Label>
                     <Switch
                       id={feature}

@@ -3,15 +3,14 @@ import { Transaction } from "@/entities/Transaction";
 import { User } from "@/entities/User";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, TrendingUp, TrendingDown, Calendar, CreditCard, Wallet } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { TrendingUp, TrendingDown, Calendar, CreditCard, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { motion } from "framer-motion";
 import TransactionChart from "../components/dashboard/TransactionChart";
 import MonthFilter from "../components/common/MonthFilter";
 import SpendingBreakdownWidget from "../components/common/SpendingBreakdownWidget";
 import usePurchaseNotes from "../hooks/usePurchaseNotes";
+import { StatCard, StatGrid } from "../components/stama/kit";
 
 // Mesma paleta (em hex) usada nos gradientes da tela de Cartões — mantém a cor de cada cartão
 // consistente entre as duas telas.
@@ -171,58 +170,21 @@ export default function Reports() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("Dashboard"))} className="hover:bg-slate-100 dark:hover:bg-slate-700">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Relatórios</h1>
-              <p className="text-slate-600 dark:text-slate-300">Análise detalhada das suas finanças</p>
-            </div>
-          </div>
-          <div className="sm:ml-auto">
-            <MonthFilter
-              selectedDate={selectedDate}
-              onChange={setSelectedDate}
-              yearMode={yearMode}
-              onToggleYearMode={() => setYearMode(v => !v)}
-            />
-          </div>
-        </div>
-
-        {/* Month Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-          <Card className="border-0 shadow-md bg-white/80 dark:bg-slate-800/80">
-            <CardContent className="p-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Receitas</p>
-              <p className="text-xl font-bold text-emerald-600">R$ {monthStats.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-md bg-white/80 dark:bg-slate-800/80">
-            <CardContent className="p-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Despesas</p>
-              <p className="text-xl font-bold text-red-600">R$ {monthStats.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-md bg-white/80 dark:bg-slate-800/80">
-            <CardContent className="p-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Saldo</p>
-              <p className={`text-xl font-bold ${monthStats.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                R$ {monthStats.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-md bg-white/80 dark:bg-slate-800/80">
-            <CardContent className="p-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Transações</p>
-              <p className="text-xl font-bold text-blue-600">{monthStats.count}</p>
-            </CardContent>
-          </Card>
-        </div>
-      </motion.div>
+    <div className="px-4 py-5 lg:px-8 max-w-6xl mx-auto">
+      <div className="mb-8 space-y-5">
+        <MonthFilter
+          selectedDate={selectedDate}
+          onChange={setSelectedDate}
+          yearMode={yearMode}
+          onToggleYearMode={() => setYearMode(v => !v)}
+        />
+        <StatCard label="Saldo do período" value={monthStats.balance} tone={monthStats.balance >= 0 ? "positive" : "negative"} size="lg" />
+        <StatGrid cols={3}>
+          <StatCard label="Receitas" value={monthStats.income} tone="positive" />
+          <StatCard label="Despesas" value={monthStats.expense} />
+          <StatCard label="Lançamentos" value={monthStats.count} money={false} className="col-span-2 sm:col-span-1" />
+        </StatGrid>
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -252,7 +214,7 @@ export default function Reports() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+        <Card className=" dark:bg-slate-800/80">
           <CardHeader>
             <CardTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Calendar className="w-5 h-5" />
@@ -267,7 +229,7 @@ export default function Reports() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="flex items-center justify-between p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                  className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
                 >
                   <div>
                     <h4 className="font-semibold text-slate-900 dark:text-white capitalize">{stat.label}</h4>

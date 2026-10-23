@@ -2,17 +2,18 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useAuth } from "@/lib/AuthContext";
-import { Menu, Plus, LogOut, Moon, Sun } from "lucide-react";
+import { Menu, LogOut, Moon, Sun } from "lucide-react";
 import InAppAlerts from "./components/notifications/InAppAlerts";
 import BillsDueAlert from "./components/alerts/BillsDueAlert";
 import useDarkMode from "./hooks/useDarkMode";
 import DeleteAccount from "./components/settings/DeleteAccount";
 import MainMenu, { BrandMark, MesaList, ProfileCard } from "./components/navigation/MainMenu";
-import { mesasFor, mesaForPage } from "./components/navigation/menuConfig";
+import { mesasFor, mesaForPage, pageTitle } from "./components/navigation/menuConfig";
 import { AgentAvatar } from "./components/agents/agents";
+import { PageHeaderProvider, SubpageHeader, usePageHeaderState } from "./components/stama/kit";
 
-// Abas das mesas no topo ("Finanças com a Bia · Agenda com o Otto"), com o avatar do agente: a mesa da página
-// atual fica em destaque, as outras levam pra primeira página delas.
+// Abas das mesas no topo ("Finanças com a Bia · Agenda com o Otto"), com o avatar do agente: a mesa
+// da página atual fica em destaque, as outras levam pra página inicial delas.
 function MesaTabs({ user, currentPageName }) {
   const current = mesaForPage(currentPageName, user);
   const location = useLocation();
@@ -44,11 +45,22 @@ function MesaTabs({ user, currentPageName }) {
   );
 }
 
-export default function Layout({ children, currentPageName }) {
+// Cabeçalho de subpágina: título padrão vem do menu; a página pode trocar título/subtítulo e
+// ligar o botão "+" via usePageHeader (components/stama/kit.jsx).
+function SubpageChrome({ currentPageName }) {
+  const header = usePageHeaderState();
+  return <SubpageHeader {...header} title={header.title || pageTitle(currentPageName)} />;
+}
+
+function LayoutShell({ children, currentPageName }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isDark, toggle: toggleDark } = useDarkMode();
+
+  // Páginas "iniciais" (a primeira de cada mesa) têm as abas dos agentes e a barra "Abrir menu";
+  // as demais são subpáginas, com botão de voltar.
+  const isHome = mesasFor(user).some((m) => m.items[0].page === currentPageName);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -103,51 +115,56 @@ export default function Layout({ children, currentPageName }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header
-          className="sticky top-0 z-30 border-b border-slate-200/60 bg-slate-50/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90"
-          style={{ paddingTop: "env(safe-area-inset-top)" }}
-        >
-          <div className="flex items-center justify-between px-4 py-3 lg:hidden">
-            <BrandMark size="sm" />
-            <InAppAlerts />
-          </div>
-          <div className="hidden justify-end px-8 pt-3 lg:flex">
-            <InAppAlerts />
-          </div>
-          <MesaTabs user={user} currentPageName={currentPageName} />
-        </header>
+        {isHome ? (
+          <header
+            className="sticky top-0 z-30 border-b border-slate-200/60 bg-slate-50/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90"
+            style={{ paddingTop: "env(safe-area-inset-top)" }}
+          >
+            <div className="flex items-center justify-between px-4 py-3 lg:hidden">
+              <BrandMark size="sm" />
+              <InAppAlerts />
+            </div>
+            <div className="hidden justify-end px-8 pt-3 lg:flex">
+              <InAppAlerts />
+            </div>
+            <MesaTabs user={user} currentPageName={currentPageName} />
+          </header>
+        ) : (
+          <header
+            className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95"
+            style={{ paddingTop: "env(safe-area-inset-top)" }}
+          >
+            <SubpageChrome currentPageName={currentPageName} />
+          </header>
+        )}
 
-        <main className="flex-1 overflow-auto pb-32 lg:pb-8">{children}</main>
+        <main className={`flex-1 overflow-auto ${isHome ? "pb-32 lg:pb-8" : "pb-8"}`}>{children}</main>
       </div>
 
-      {/* Mobile: barra flutuante "Abrir menu" + atalho de nova transação */}
-      <div className="fixed inset-x-0 bottom-0 z-[9999] px-4 lg:hidden" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
-        <div className="mx-auto flex max-w-xl items-center gap-2 rounded-[2rem] border border-slate-200 bg-white/95 p-1.5 shadow-[0_8px_30px_rgba(15,23,42,0.12)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            className="flex flex-1 items-center justify-center gap-3 rounded-[1.6rem] bg-slate-100 py-3.5 font-display text-base font-medium text-slate-800 transition active:scale-[0.99] dark:bg-slate-800 dark:text-slate-100"
-          >
-            <Menu className="h-5 w-5" /> Abrir menu
-          </button>
-          <Link
-            to={createPageUrl("NewTransactionOptions")}
-            className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-full bg-brand-700 text-white shadow-md transition active:scale-95"
-            aria-label="Nova transação"
-          >
-            <Plus className="h-6 w-6" />
-          </Link>
+      {/* Mobile, nas páginas iniciais: barra flutuante "Abrir menu" */}
+      {isHome && (
+        <div className="fixed inset-x-0 bottom-0 z-[9999] px-4 lg:hidden" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+          <div className="mx-auto max-w-xl rounded-[2rem] border border-slate-200 bg-white/95 p-1.5 shadow-[0_8px_30px_rgba(15,23,42,0.12)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              className="flex w-full items-center justify-center gap-3 rounded-[1.6rem] bg-slate-100 py-4 font-display text-base font-medium text-slate-800 transition active:scale-[0.99] dark:bg-slate-800 dark:text-slate-100"
+            >
+              <Menu className="h-5 w-5" /> Abrir menu
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      <MainMenu
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        user={user}
-        isDark={isDark}
-        toggleDark={toggleDark}
-        onLogout={handleLogout}
-      />
+      <MainMenu open={menuOpen} onClose={() => setMenuOpen(false)} user={user} isDark={isDark} toggleDark={toggleDark} onLogout={handleLogout} />
     </div>
+  );
+}
+
+export default function Layout(props) {
+  return (
+    <PageHeaderProvider>
+      <LayoutShell {...props} />
+    </PageHeaderProvider>
   );
 }

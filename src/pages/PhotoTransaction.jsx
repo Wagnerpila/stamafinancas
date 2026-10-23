@@ -4,7 +4,7 @@ import { UploadFile, receiptOCR } from "@/api/integrations";
 import { usePlanAccess, PlanRestriction, requestUpgrade } from "@/components/common/PlanRestriction";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowLeft, Camera, Loader2, AlertCircle, RefreshCw, Check } from "lucide-react";
+import { Camera, Loader2, AlertCircle, RefreshCw, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -186,13 +186,9 @@ export default function PhotoTransaction() {
 
   if (!hasAccess.photo_capture) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto">
+      <div className="px-4 py-5 lg:px-8 max-w-2xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("NewTransactionOptions"))}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Fotografar Comprovante</h1>
             <p className="text-slate-600 dark:text-slate-300">Aponte a câmera para o documento.</p>
           </div>
         </div>
@@ -207,26 +203,18 @@ export default function PhotoTransaction() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto">
+    <div className="px-4 py-5 lg:px-8 max-w-2xl mx-auto">
       <motion.div 
         initial={{ opacity: 0, y: -20 }} 
         animate={{ opacity: 1, y: 0 }} 
         className="flex items-center gap-4 mb-8"
       >
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => navigate(createPageUrl("NewTransactionOptions"))}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Fotografar Comprovante</h1>
           <p className="text-slate-600 dark:text-slate-300">Aponte a câmera para o documento.</p>
         </div>
       </motion.div>
       
-      <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800 backdrop-blur-sm">
+      <Card className=" dark:bg-slate-800">
         <CardContent className="p-6">
           {error && (
             <Alert variant="destructive" className="mb-4">
@@ -235,7 +223,7 @@ export default function PhotoTransaction() {
             </Alert>
           )}
 
-          <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden relative mb-6">
+          <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden relative mb-6">
             {photo ? (
               <img src={photo} alt="Comprovante" className="w-full h-full object-contain" />
             ) : (
@@ -279,7 +267,7 @@ export default function PhotoTransaction() {
                 </Button>
                 <Button 
                   onClick={processPhoto} 
-                  className="flex-1 h-12 text-lg bg-emerald-600 hover:bg-emerald-700" 
+                  className="flex-1 h-12 text-lg bg-brand-700 hover:bg-brand-800" 
                   disabled={isProcessing}
                 >
                   {isProcessing ? (

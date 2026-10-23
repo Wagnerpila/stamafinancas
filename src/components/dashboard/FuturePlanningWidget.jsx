@@ -70,7 +70,7 @@ export default function FuturePlanningWidget({ bills = [] }) {
   }, [months, bills]);
 
   return (
-    <Card className="border-0 shadow-lg border-l-4 border-indigo-500">
+    <Card className=" border-l-4 border-indigo-500">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold dark:text-white flex items-center gap-2">
@@ -87,7 +87,7 @@ export default function FuturePlanningWidget({ bills = [] }) {
       <CardContent className="pt-0">
         <div className="grid grid-cols-3 gap-2">
           {summary.map((s) => (
-            <div key={s.key} className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 text-center">
+            <div key={s.key} className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-3 text-center">
               <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold mb-1">{s.label}</p>
               <p className="text-base font-bold text-slate-900 dark:text-white">R$ {formatBRL(s.total)}</p>
               <div className="mt-1 space-y-0.5 text-xs text-slate-500 dark:text-slate-400">
