@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises';
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, downloadMediaMessage } from '@whiskeysockets/baileys';
 import { pino } from 'pino';
 import QRCode from 'qrcode';
 import { WHATSAPP_SESSION_DIR } from './session.js';
 import { handleIncomingMessage } from './messageHandler.js';
+import { phoneVariants, phoneVariantsFromKey } from './phone.js';
 
 const logger = pino({ level: process.env.WHATSAPP_LOG_LEVEL || 'silent' });
 
@@ -17,6 +18,47 @@ const state_ = {
 
 export function getWhatsAppStatus() {
   return { status: state_.status, qrDataUrl: state_.qrDataUrl, phoneNumber: state_.phoneNumber };
+}
+
+// Converte a mensagem crua do Baileys no formato neutro de messageHandler.js.
+function toIncoming(sock, msg) {
+  const remoteJid = msg.key?.remoteJid;
+  if (!remoteJid || msg.key?.fromMe) return null;
+  if (remoteJid === 'status@broadcast' || remoteJid.endsWith('@g.us')) return null;
+
+  const content = msg.message || {};
+  let media = null;
+  if (content.imageMessage) media = { kind: 'image', mimetype: content.imageMessage.mimetype || 'image/jpeg' };
+  else if (content.audioMessage) media = { kind: 'audio', mimetype: content.audioMessage.mimetype || 'audio/ogg' };
+  else if (content.documentMessage) {
+    media = { kind: 'document', mimetype: content.documentMessage.mimetype || 'application/octet-stream' };
+  }
+
+  return {
+    phoneVariants: phoneVariantsFromKey(msg.key),
+    senderJid: remoteJid,
+    debugId: `${remoteJid} alt=${msg.key?.remoteJidAlt || '-'}`,
+    text:
+      content.conversation ||
+      content.extendedTextMessage?.text ||
+      content.imageMessage?.caption ||
+      content.documentMessage?.caption ||
+      null,
+    media,
+    downloadMedia: () => downloadMediaMessage(msg, 'buffer', {}),
+    reply: (text) => sock.sendMessage(remoteJid, { text }),
+  };
+}
+
+// Envio proativo (avisos do digest.js). O número cadastrado pode estar com ou sem o 9 extra, então
+// pergunta ao WhatsApp qual variante existe antes de enviar.
+export async function sendWhatsAppText(number, text) {
+  if (!state_.sock || state_.status !== 'connected') throw new Error('WhatsApp não conectado.');
+  const candidates = phoneVariants(number).filter((v) => v.startsWith('55'));
+  const results = await state_.sock.onWhatsApp(...candidates);
+  const found = results?.find((r) => r.exists);
+  if (!found) throw new Error(`Número ${number} não encontrado no WhatsApp.`);
+  await state_.sock.sendMessage(found.jid, { text });
 }
 
 export async function startWhatsApp() {
@@ -74,7 +116,8 @@ export async function startWhatsApp() {
       if (type !== 'notify') return;
       for (const msg of messages) {
         try {
-          await handleIncomingMessage(sock, msg);
+          const incoming = toIncoming(sock, msg);
+          if (incoming) await handleIncomingMessage(incoming);
         } catch (err) {
           logger.error({ err }, 'Erro ao processar mensagem do WhatsApp.');
         }

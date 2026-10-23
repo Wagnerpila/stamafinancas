@@ -66,9 +66,11 @@ export default function WhatsAppBotPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Conecte um número de WhatsApp para que os usuários possam mandar fotos de comprovantes e
-          faturas por lá — o bot lê, interpreta com IA e lança a transação automaticamente na conta
-          da pessoa (identificada pelo número cadastrado em Configurações {'>'} Alertas).
+          Conecte um número de WhatsApp para virar o Stama, assistente financeiro dos usuários: eles mandam
+          texto, áudio ou foto de comprovante ("gastei 62 na farmácia", "como estou esse mês?") e o
+          bot lança, consulta e corrige direto na conta da pessoa (identificada pelo número
+          cadastrado em Configurações {'>'} Alertas). Também envia avisos de contas vencendo e o
+          resumo semanal.
         </p>
 
         <div className="flex items-center gap-2">
@@ -78,10 +80,19 @@ export default function WhatsAppBotPanel() {
             }`}
           />
           <span className="font-medium text-slate-900 dark:text-white">{STATUS_LABEL[state] || state}</span>
+          {status?.provider && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+              {status.provider === "evolution" ? "Evolution API" : "Conexão direta"}
+            </span>
+          )}
           {status?.phoneNumber && (
             <span className="text-sm text-slate-500 dark:text-slate-400">({status.phoneNumber})</span>
           )}
         </div>
+
+        {status?.error && (
+          <p className="text-sm text-red-600">{status.error}</p>
+        )}
 
         {state === "qr" && status?.qrDataUrl && (
           <div className="flex flex-col items-center gap-2 py-2">

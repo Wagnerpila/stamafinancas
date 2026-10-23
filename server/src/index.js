@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { createApp } from './app.js';
-import { startWhatsApp } from './whatsapp/client.js';
+import { bootWhatsApp } from './whatsapp/index.js';
+import { startDigestScheduler } from './whatsapp/digest.js';
+import { startReminderScheduler } from './whatsapp/reminders.js';
 
 const PORT = process.env.PORT || 3001;
 const app = createApp();
@@ -11,4 +13,6 @@ app.listen(PORT, () => {
 
 // Reconnects automatically if a paired session already exists on the persistent volume;
 // otherwise stays idle until an admin starts pairing from the WhatsApp panel.
-startWhatsApp().catch((err) => console.error('[whatsapp] Falha ao iniciar:', err.message));
+bootWhatsApp().catch((err) => console.error('[whatsapp] Falha ao iniciar:', err.message));
+startDigestScheduler();
+startReminderScheduler();

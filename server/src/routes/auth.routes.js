@@ -165,6 +165,11 @@ router.patch('/me', requireAuth, async (req, res, next) => {
         data[field] = req.body[field];
       }
     }
+    // Trocar o número desfaz o vínculo com o bot — o novo número precisa ser confirmado de novo.
+    if ('whatsapp_number' in data && String(data.whatsapp_number || '').replace(/\D/g, '') !== String(req.user.whatsapp_number || '').replace(/\D/g, '')) {
+      data.whatsapp_verified_at = null;
+      data.whatsapp_lid = null;
+    }
     const user = await prisma.user.update({ where: { id: req.user.id }, data });
     res.json(publicUser(user));
   } catch (err) {

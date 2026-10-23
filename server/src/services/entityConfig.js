@@ -79,6 +79,8 @@ export const ENTITY_CONFIG = {
   // /api/entities/AIConsultation (histórico de consultoria de IA) quebrava com 500.
   AIConsultation: { accessor: 'aIConsultation', ...defaultOwned },
   NotificationSettings: { accessor: 'notificationSettings', ...defaultOwned },
+  CategoryRule: { accessor: 'categoryRule', ...defaultOwned },
+  Task: { accessor: 'task', ...defaultOwned },
 
   // --- Community / social entities: cross-user visibility, custom rules ---
   SharedFinancialData: {

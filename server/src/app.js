@@ -27,7 +27,7 @@ export function createApp() {
     .map((o) => o.trim());
 
   app.use(cors({ origin: allowedOrigins, credentials: true }));
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '25mb' })); // webhook da Evolution traz mídia em base64
   app.use('/uploads', express.static(UPLOAD_DIR));
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));

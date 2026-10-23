@@ -18,6 +18,13 @@ model User {
   full_name            String
   role                 String   @default("user") // "user" | "admin"
   whatsapp_number      String?
+  // Vínculo com o bot do WhatsApp (whatsapp/linking.js): o app gera um código, o usuário manda o
+  // código pro bot e o bot grava o número/identificador real de quem mandou. whatsapp_lid guarda
+  // o identificador anônimo ("...@lid") quando o WhatsApp não revela o número do remetente.
+  whatsapp_lid           String?
+  whatsapp_verified_at   DateTime?
+  whatsapp_link_code     String?
+  whatsapp_link_expires  DateTime?
   monthly_budget       Float?
   food_voucher_balance Float?
   subscription_plan_name String @default("free") // "free" | "premium"
@@ -32,6 +39,8 @@ model User {
   creditCardInvoices    CreditCardInvoice[]
   creditCardTransactions CreditCardTransaction[]
   purchaseNotes          PurchaseNote[]
+  categoryRules          CategoryRule[]
+  tasks                  Task[]
   bills                 Bill[]
   crediarios            Crediario[]
   goals                 Goal[]
@@ -186,6 +195,51 @@ model PurchaseNote {
   @@index([user_id])
 }
 
+// Correções de categoria aprendidas pelo bot do WhatsApp: quando o usuário responde "isso é
+// Mercado" pra um lançamento, guarda a palavra-chave da descrição (normalizada) -> categoria, e
+// os próximos lançamentos com a mesma palavra-chave já entram na categoria certa.
+model CategoryRule {
+  id           String   @id @default(cuid())
+  user_id      String
+  created_by   String
+  keyword      String
+  type         String // "income" | "expense"
+  category     String
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, keyword, type])
+  @@index([user_id])
+}
+
+// Tarefas e lembretes (mesa "Agenda"): criados no app ou pelo bot do WhatsApp ("me lembra de
+// pagar o IPVA dia 15 às 9h"). remind_at é o instante do aviso pelo WhatsApp (whatsapp/reminders.js);
+// reminded_at marca que o aviso daquele ciclo já saiu. Recorrentes avançam due_date/remind_at ao
+// serem concluídas ou avisadas.
+model Task {
+  id           String    @id @default(cuid())
+  user_id      String
+  created_by   String
+  title        String
+  notes        String?
+  due_date     DateTime?
+  remind_at    DateTime?
+  reminded_at  DateTime?
+  priority     String    @default("medium") // low|medium|high
+  status       String    @default("pending") // pending|in_progress|done
+  recurrence   String    @default("none") // none|daily|weekly|monthly
+  completed_at DateTime?
+  created_date DateTime  @default(now())
+  updated_date DateTime  @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([remind_at])
+}
+
 model Bill {
   id                  String    @id @default(cuid())
   user_id             String
@@ -318,6 +372,10 @@ model NotificationSettings {
   overdue_reminders Boolean  @default(true)
   goals_progress    Boolean  @default(true)
   weekly_summary    Boolean  @default(true)
+  // Controle de envio dos avisos proativos do bot do WhatsApp (ver whatsapp/digest.js): guarda a
+  // data ("YYYY-MM-DD") do último envio pra não repetir o aviso no mesmo dia após um restart.
+  whatsapp_last_digest String?
+  whatsapp_last_weekly String?
   created_date      DateTime @default(now())
   updated_date      DateTime @updatedAt
 

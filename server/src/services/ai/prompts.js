@@ -196,3 +196,151 @@ Pergunta do usuário: ${question}
 
 Forneça conselhos específicos, práticos e baseados nos dados apresentados. Use um tom amigável e profissional.`;
 }
+
+// Interpretação de mensagens de texto/áudio do bot do WhatsApp (src/whatsapp/assistant.js): a IA
+// só classifica a intenção e extrai os dados — quem grava no banco e calcula totais é o código,
+// pra que os números respondidos batam exatamente com os do app.
+const assistantTransactionItem = {
+  type: 'object',
+  properties: {
+    description: { type: 'string', description: 'Estabelecimento ou item, curto e com inicial maiúscula (ex: "Farmácia", "Almoço", "Salário")' },
+    amount: { type: 'number', description: 'Valor TOTAL positivo (em compras parceladas, o total da compra, não a parcela)' },
+    type: { type: 'string', enum: ['income', 'expense'] },
+    category: { type: 'string' },
+    date: { type: 'string', description: 'YYYY-MM-DD' },
+    payment_method: { type: 'string', enum: ['cash', 'pix', 'debit', 'credit_card', 'food_voucher'] },
+    card_name: { type: 'string', description: 'Nome do cartão citado, exatamente como na lista de cartões (se casar com algum)' },
+    installments: { type: 'integer', description: 'Número de parcelas no cartão (1 se à vista)' },
+  },
+  required: ['description', 'amount', 'type'],
+};
+
+export const assistantIntentSchema = {
+  type: 'object',
+  properties: {
+    intent: {
+      type: 'string',
+      enum: [
+        'register',
+        'query',
+        'correct_last',
+        'delete_last',
+        'create_bill',
+        'list_bills',
+        'pay_bill',
+        'create_task',
+        'list_tasks',
+        'complete_task',
+        'help',
+        'chat',
+      ],
+    },
+    transactions: { type: 'array', items: assistantTransactionItem },
+    query: {
+      type: 'object',
+      properties: {
+        kind: {
+          type: 'string',
+          enum: ['summary', 'by_category', 'category_total', 'recent', 'income', 'card', 'budget', 'installments', 'projection'],
+        },
+        category: { type: 'string' },
+        card_name: { type: 'string' },
+        start_date: { type: 'string', description: 'YYYY-MM-DD' },
+        end_date: { type: 'string', description: 'YYYY-MM-DD (inclusive)' },
+      },
+    },
+    correction: {
+      type: 'object',
+      properties: {
+        description: { type: 'string' },
+        amount: { type: 'number' },
+        category: { type: 'string' },
+        date: { type: 'string', description: 'YYYY-MM-DD' },
+        payment_method: { type: 'string', enum: ['cash', 'pix', 'debit', 'credit_card', 'food_voucher'] },
+      },
+    },
+    bill: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        amount: { type: 'number' },
+        type: { type: 'string', enum: ['payable', 'receivable'] },
+        due_date: { type: 'string', description: 'YYYY-MM-DD do próximo vencimento' },
+        recurrence: { type: 'string', enum: ['none', 'monthly', 'quarterly', 'yearly'] },
+        category: { type: 'string' },
+      },
+    },
+    bill_title: { type: 'string', description: 'Para pay_bill: título EXATO de uma das contas pendentes listadas' },
+    task: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'O que fazer, curto e com inicial maiúscula (ex: "Pagar o IPVA")' },
+        due_date: { type: 'string', description: 'YYYY-MM-DD do prazo, se houver' },
+        remind_at: { type: 'string', description: 'YYYY-MM-DDTHH:mm (horário de Brasília) do lembrete, se houver' },
+        priority: { type: 'string', enum: ['low', 'medium', 'high'] },
+        recurrence: { type: 'string', enum: ['none', 'daily', 'weekly', 'monthly'] },
+      },
+    },
+    task_title: { type: 'string', description: 'Para complete_task: título EXATO de uma das tarefas abertas listadas' },
+    task_scope: { type: 'string', enum: ['today', 'week', 'all'], description: 'Para list_tasks' },
+    reply: { type: 'string', description: 'Só para help/chat: resposta curta em português' },
+  },
+  required: ['intent'],
+};
+
+export function assistantSystemPrompt({ today, weekday, now, expenseCategories, incomeCategories, cards, pendingBills, openTasks, lastAction, history }) {
+  const tasksBlock = openTasks?.length ? openTasks.map((t) => `- ${t}`).join('\n') : '(nenhuma)';
+  const cardsBlock = cards?.length ? cards.map((c) => `- ${c}`).join('\n') : '(nenhum cartão cadastrado)';
+  const billsBlock = pendingBills?.length ? pendingBills.map((b) => `- ${b}`).join('\n') : '(nenhuma)';
+  const historyBlock = history?.length
+    ? history.map((h) => `${h.role === 'user' ? 'Usuário' : 'Assistente'}: ${h.text}`).join('\n')
+    : '(início da conversa)';
+
+  return `Você é o Stama, assistente financeiro pessoal do usuário, atendendo pelo WhatsApp (com a Bia, que cuida das finanças, e o Otto, que cuida da agenda). Sua tarefa é interpretar a ÚLTIMA mensagem do usuário e devolver a intenção e os dados estruturados. Não invente valores.
+
+Hoje é ${today} (${weekday}), agora são ${now} no horário de Brasília. Resolva datas relativas ("ontem", "sexta", "dia 5") para YYYY-MM-DD; sem data citada, use hoje.
+
+Intenções:
+- register: registrar gasto(s) ou receita(s) que JÁ aconteceram ("gastei 62 na farmácia", "almoço 141,60 no cartão do Itaú", "recebi 2000 de salário", "uber 23 e lanche 18"). Uma mensagem pode ter vários itens — um por elemento de transactions.
+  - "no cartão"/"crédito"/"parcelei"/"em 3x" => payment_method "credit_card", card_name e installments. "pix" => pix, "débito" => debit, "dinheiro" => cash, "VA"/"VR"/"vale" => food_voucher. Sem menção, use "pix".
+  - "recebi", "caiu", "salário", "vendi", "me pagaram" => income.
+- query: perguntas sobre os dados. kind:
+  - summary: saldo/resumo do período ("como estou esse mês", "qual meu saldo")
+  - by_category: gastos agrupados por categoria
+  - category_total: quanto gastou numa categoria específica (preencha category com o nome da lista)
+  - recent: últimos lançamentos
+  - income: receitas do período
+  - card: gastos no cartão (card_name se citado)
+  - budget: orçamento/limites ("estourei o orçamento?")
+  - installments: compras parceladas em aberto / quanto está comprometido
+  - projection: previsão dos próximos meses
+  Período padrão: mês atual (start_date = dia 1, end_date = último dia). "semana passada", "mês passado", "esse ano" => calcule as datas.
+- correct_last: corrige o ÚLTIMO registro feito pelo assistente ("na verdade foi 50", "é Mercado", "foi ontem", "foi no débito"). Preencha só os campos que mudaram em correction.
+- delete_last: apagar o último registro ("apaga isso", "lancei errado, exclui").
+- create_bill: dinheiro que AINDA VAI entrar ou sair, avulso ou recorrente ("amanhã vou receber 200 de freelancer" => receivable, recurrence none, due_date amanhã; "sexta pago 300 do dentista"; "aluguel 1500 todo dia 10"; "conta de luz 230 vence dia 15"; "toda segunda 89,90 da academia"). Verbos no futuro ("vou receber", "vou pagar", "vai cair", "tenho que pagar") são SEMPRE create_bill, nunca register. Recorrência só pode ser mensal, trimestral ou anual — para semanal use monthly. due_date = vencimento (o próximo, a partir de hoje, se recorrente).
+- pay_bill: pagou (ou recebeu) uma conta que está na lista de contas pendentes abaixo ("paguei o aluguel", "recebi o freelancer", "caiu o pagamento do cliente"). bill_title = título EXATO da lista. Se não houver conta correspondente na lista, use register.
+- list_bills: o que vence / contas a pagar ou receber do mês.
+- create_task: tarefa ou lembrete que NÃO é registro de dinheiro ("me lembra de ligar pro contador amanhã às 10h", "cria a tarefa de revisar o contrato até sexta", "toda segunda 8h me lembra da reunião"). Com horário => remind_at; só com dia => due_date (e remind_at às 09:00 desse dia se for um lembrete). "urgente"/"importante" => priority high.
+- list_tasks: o que tenho pra fazer / meus lembretes / resumo do dia (task_scope: today, week ou all).
+- complete_task: concluiu uma tarefa da lista de tarefas abertas abaixo ("já liguei pro contador", "feito o contrato"). task_title = título EXATO da lista.
+- help: pergunta o que o assistente faz.
+- chat: saudação, agradecimento ou qualquer outra coisa — responda em reply, curto, amigável e em português (pode dar uma dica financeira breve).
+
+Categorias: prefira o nome EXATO de uma das listas abaixo, nunca termos em inglês. Se nenhuma servir bem e o assunto for claro, crie uma categoria nova com nome curto em português e inicial maiúscula (ex: "Freelancer", "Pet", "Academia") — ela será criada na conta do usuário. Só use "outras despesas"/"outras receitas" quando não der pra saber do que se trata.
+Categorias de despesa: ${expenseCategories?.join(', ') || '(padrão)'}
+Categorias de receita: ${incomeCategories?.join(', ') || '(padrão)'}
+
+Cartões de crédito do usuário:
+${cardsBlock}
+
+Contas pendentes deste mês:
+${billsBlock}
+
+Tarefas abertas:
+${tasksBlock}
+
+Último registro feito pelo assistente: ${lastAction || '(nenhum)'}
+
+Conversa recente:
+${historyBlock}`;
+}
