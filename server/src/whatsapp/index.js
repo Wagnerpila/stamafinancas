@@ -3,7 +3,7 @@
 //   evolution          — Evolution API self-hosted, mensagens chegam por webhook (evolution.js)
 
 import { getWhatsAppStatus, logoutWhatsApp, sendWhatsAppText, startWhatsApp } from './client.js';
-import { getEvolutionStatus, logoutEvolution, sendEvolutionText, startEvolution } from './evolution.js';
+import { bootEvolution, getEvolutionStatus, logoutEvolution, sendEvolutionText, startEvolution } from './evolution.js';
 
 export function whatsappProvider() {
   return (process.env.WHATSAPP_PROVIDER || 'baileys').trim().toLowerCase() === 'evolution' ? 'evolution' : 'baileys';
@@ -32,8 +32,8 @@ export async function sendText(number, text) {
 }
 
 // Na inicialização do servidor: o Baileys reconecta sozinho se já houver sessão salva; na
-// Evolution a sessão vive no servidor dela, então só não faz nada.
+// Evolution a sessão vive no servidor dela, então só garante instância + webhook apontando pra cá.
 export async function bootWhatsApp() {
-  if (whatsappProvider() === 'evolution') return;
+  if (whatsappProvider() === 'evolution') return bootEvolution();
   await startWhatsApp();
 }

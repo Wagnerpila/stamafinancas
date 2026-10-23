@@ -100,13 +100,14 @@ export async function getEvolutionStatus() {
       let phoneNumber = null;
       try {
         const list = await api('GET', `/instance/fetchInstances?instanceName=${encodeURIComponent(instance)}`);
-        const info = Array.isArray(list) ? list[0] : list;
-        const owner = info?.ownerJid || info?.owner || info?.instance?.owner;
-        phoneNumber = owner ? String(owner).split('@')[0] : null;
-      } catch {
-        // número é só informativo no painel
+        const info = Array.isArray(list) ? list.find((i) => (i?.name || i?.instanceName || i?.instance?.instanceName) === instance) || list[0] : list;
+        // O campo do dono muda entre versões da Evolution (ownerJid na v2, instance.owner na v1).
+        const owner = info?.ownerJid || info?.owner || info?.instance?.owner || info?.instance?.ownerJid || info?.number;
+        phoneNumber = owner ? String(owner).split('@')[0].split(':')[0].replace(/\D/g, '') || null : null;
+      } catch (err) {
+        console.error('[whatsapp/evolution] Não consegui ler o número da instância:', err.message);
       }
-      return { status: 'connected', qrDataUrl: null, phoneNumber, provider: 'evolution' };
+      return { status: 'connected', qrDataUrl: null, phoneNumber: phoneNumber || process.env.WHATSAPP_BOT_NUMBER || null, provider: 'evolution' };
     }
     if (state === 'connecting' && lastQr) return { status: 'qr', qrDataUrl: lastQr, phoneNumber: null, provider: 'evolution' };
     return { status: state === 'connecting' ? 'connecting' : 'disconnected', qrDataUrl: null, phoneNumber: null, provider: 'evolution' };
@@ -114,6 +115,22 @@ export async function getEvolutionStatus() {
     if (err.status === 404) return { status: 'disconnected', qrDataUrl: null, phoneNumber: null, provider: 'evolution' };
     return { status: 'disconnected', qrDataUrl: null, phoneNumber: null, provider: 'evolution', error: err.message };
   }
+}
+
+// Na subida do servidor: garante que a instância existe e que o webhook aponta pra cá — sem isso,
+// uma instância já conectada direto pelo painel da Evolution nunca mandaria as mensagens pro app
+// (o botão "Conectar" do Painel Admin, que também registra o webhook, só aparece desconectado).
+export async function bootEvolution() {
+  const { url, apiKey, instance, webhookUrl } = config();
+  if (!url || !apiKey) {
+    console.warn('[whatsapp/evolution] EVOLUTION_API_URL/EVOLUTION_API_KEY não definidas — bot desligado.');
+    return;
+  }
+  if (!webhookUrl) console.warn('[whatsapp/evolution] EVOLUTION_WEBHOOK_URL não definida — o app não vai receber as mensagens.');
+  await ensureInstance();
+  await ensureWebhook();
+  const status = await getEvolutionStatus();
+  console.log('[whatsapp/evolution] Instância "%s": %s%s', instance, status.status, status.phoneNumber ? ` (${status.phoneNumber})` : '');
 }
 
 export async function startEvolution() {
