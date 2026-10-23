@@ -1,3 +1,21 @@
+// Verde da marca Stama. A paleta `blue` do Tailwind é remapeada pra ela de propósito:
+// as telas foram escritas com bg-blue-600/text-blue-600 etc. como cor de destaque, e trocar a
+// paleta aqui muda a identidade visual do app inteiro de uma vez, sem editar dezenas de arquivos.
+// Use `brand-*` em código novo.
+const brand = {
+	50: '#eefbf5',
+	100: '#d6f5e7',
+	200: '#afead2',
+	300: '#7bd8b6',
+	400: '#45bf96',
+	500: '#20a37b',
+	600: '#0d8462',
+	700: '#0a6b50',
+	800: '#0a5541',
+	900: '#094636',
+	950: '#03281f',
+};
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     darkMode: ["class"],
@@ -9,7 +27,17 @@ module.exports = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+  		fontFamily: {
+  			sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+  			display: ['Poppins', 'Inter', 'system-ui', 'sans-serif'],
+  		},
   		colors: {
+  			brand,
+  			blue: brand,
+  			bubble: {
+  				DEFAULT: '#d9fdd3',
+  				dark: '#144d37',
+  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

@@ -9,12 +9,7 @@ import {
   TrendingDown,
   Wallet,
   ArrowUpRight,
-  ShoppingCart,
-  Plus,
-  Target,
-  Receipt,
-  CreditCard,
-  Calendar
+  ShoppingCart
 } from "lucide-react";
 import StatsCard from "../components/dashboard/StatsCard";
 import TransactionChart from "../components/dashboard/TransactionChart";
@@ -22,16 +17,14 @@ import RecentTransactions from "../components/dashboard/RecentTransactions";
 import FoodVoucherConfig from "../components/dashboard/FoodVoucherConfig";
 import ShareDataButton from "../components/sharing/ShareDataButton";
 import FuturePlanningWidget from "../components/dashboard/FuturePlanningWidget";
+import FinanceOverview from "../components/dashboard/FinanceOverview";
 import CategorySpendingCompact from "../components/dashboard/CategorySpendingCompact";
 import SpendingBreakdownWidget from "../components/common/SpendingBreakdownWidget";
 import MonthFilter from "../components/common/MonthFilter";
 import PullToRefresh from "../components/mobile/PullToRefresh";
 import useRefreshOnForeground from "../hooks/useRefreshOnForeground";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { createPageUrl } from "@/utils";
-import { Link } from "react-router-dom";
 
 const formatBRL = (value) =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -202,77 +195,29 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={loadInitialData}>
-      <div className="p-4 md:p-8 max-w-7xl mx-auto">
-        {/* Header + Month Filter */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        >
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">Dashboard Financeiro</h1>
-            <p className="text-slate-600 dark:text-slate-300">Acompanhe suas finanças de forma inteligente</p>
-          </div>
+      <div className="p-4 md:p-8 max-w-5xl mx-auto">
+        <FinanceOverview
+          transactions={transactions}
+          creditCardTxs={creditCardTxs}
+          bills={bills}
+          budgets={budgets}
+          selectedDate={selectedDate}
+          onChangeDate={(d) => {
+            setYearMode(false);
+            setSelectedDate(d);
+          }}
+        />
+
+        {/* Detalhes — widgets completos do período */}
+        <div className="mb-8 mt-4 flex flex-col gap-4 border-t border-slate-200/70 pt-8 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+          <p className="section-label flex-1">Detalhes</p>
           <MonthFilter
             selectedDate={selectedDate}
             onChange={setSelectedDate}
             yearMode={yearMode}
             onToggleYearMode={() => setYearMode(v => !v)}
           />
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-8"
-        >
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-800">
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Ações Rápidas</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Link to={createPageUrl("NewTransactionOptions")}>
-                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg text-white">
-                    <Plus className="w-6 h-6" />
-                    <span className="text-sm font-medium">Nova Transação</span>
-                  </Button>
-                </Link>
-                <Link to={createPageUrl("TransactionCategories")}>
-                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-lg text-white">
-                    <Target className="w-6 h-6" />
-                    <span className="text-sm font-medium">Orçamentos</span>
-                  </Button>
-                </Link>
-                <Link to={createPageUrl("BillsToPay")}>
-                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg text-white">
-                    <Receipt className="w-6 h-6" />
-                    <span className="text-sm font-medium">Contas a Pagar</span>
-                  </Button>
-                </Link>
-                <Link to={createPageUrl("BillsToReceive")}>
-                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-lg text-white">
-                    <ArrowUpRight className="w-6 h-6" />
-                    <span className="text-sm font-medium">Contas a Receber</span>
-                  </Button>
-                </Link>
-                <Link to={createPageUrl("CreditCards")}>
-                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-lg text-white">
-                    <CreditCard className="w-6 h-6" />
-                    <span className="text-sm font-medium">Cartões</span>
-                  </Button>
-                </Link>
-                <Link to={createPageUrl("Crediario")}>
-                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 shadow-lg text-white">
-                    <Calendar className="w-6 h-6" />
-                    <span className="text-sm font-medium">Crediário</span>
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        </div>
 
         {/* Category Spending — Compact Grid (between Quick Actions and Stats) */}
         <motion.div

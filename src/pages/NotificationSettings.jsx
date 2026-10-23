@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { MessageCircle, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 function WhatsAppSettings() {
@@ -52,8 +52,13 @@ function WhatsAppSettings() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Insira seu número de WhatsApp com código do país (ex: 5511999998888) para receber alertas. 
-          <span className="font-bold">A funcionalidade de envio automático requer configuração adicional pelo administrador do sistema.</span>
+          Com o WhatsApp vinculado, o Stama te manda pela manhã as contas que estão vencendo e as
+          tarefas do dia, e às segundas um resumo da semana — seguindo as preferências acima. Para
+          vincular com confirmação por código, use a tela{" "}
+          <Link to={createPageUrl("StamaWhatsApp")} className="font-semibold text-brand-700 underline-offset-4 hover:underline">
+            Stama no WhatsApp
+          </Link>
+          .
         </p>
         <div className="space-y-2">
           <Label htmlFor="whatsapp">Seu número de WhatsApp</Label>

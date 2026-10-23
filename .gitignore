@@ -29,3 +29,6 @@ dist-ssr
 
 .env
 base44/.app.jsonc
+
+# Gerado pelo vite-plugin-pwa no modo dev
+dev-dist

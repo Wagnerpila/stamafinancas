@@ -73,6 +73,9 @@ import SubscriptionAdmin from './pages/SubscriptionAdmin';
 import Transactions from './pages/Transactions';
 import VoiceTransaction from './pages/VoiceTransaction';
 import FuturePlanning from './pages/FuturePlanning';
+import Recurring from './pages/Recurring';
+import Tasks from './pages/Tasks';
+import StamaWhatsApp from './pages/StamaWhatsApp';
 import __Layout from './Layout.jsx';
 
 
@@ -103,6 +106,9 @@ export const PAGES = {
     "Transactions": Transactions,
     "VoiceTransaction": VoiceTransaction,
     "FuturePlanning": FuturePlanning,
+    "Recurring": Recurring,
+    "Tasks": Tasks,
+    "StamaWhatsApp": StamaWhatsApp,
 }
 
 export const pagesConfig = {
